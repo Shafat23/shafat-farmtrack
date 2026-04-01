@@ -722,8 +722,19 @@ body {
     </div>
     <form onsubmit="addPond(event)">
       <div class="form-group">
-        <label>Pond Name</label>
-        <input type="text" id="pond-name" placeholder="e.g. Pond A, Tank 1" required>
+        <label>Fish Species</label>
+        <select id="pond-species" onchange="autoGeneratePondName()">
+          <option value="Catfish">Catfish (CAT)</option>
+          <option value="Tilapia">Tilapia (TIL)</option>
+          <option value="Salmon">Salmon (SAL)</option>
+          <option value="Carp">Carp (CAR)</option>
+          <option value="Mixed">Mixed (MIX)</option>
+          <option value="Other">Other (OTH)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pond Name <span style="font-size:11px;color:var(--text-light);">(auto-generated)</span></label>
+        <input type="text" id="pond-name" placeholder="e.g. CAT-001" required readonly style="background:#e2e8f0;font-weight:700;letter-spacing:1px;">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -738,13 +749,9 @@ body {
           </select>
         </div>
         <div class="form-group">
-          <label>Size</label>
-          <input type="text" id="pond-size" placeholder="e.g. 4m x 4m">
+          <label>Size (ft)</label>
+          <input type="text" id="pond-size" placeholder="e.g. 12x10x4">
         </div>
-      </div>
-      <div class="form-group">
-        <label>Fish Species</label>
-        <input type="text" id="pond-species" placeholder="e.g. Catfish, Tilapia">
       </div>
       <div class="form-group">
         <label>Notes</label>
@@ -1006,6 +1013,10 @@ function genId() {
 }
 
 function fmt(n) {
+  return 'GH₵' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtNum(n) {
   return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
@@ -1059,6 +1070,8 @@ function openModal(id) {
   document.querySelectorAll('input[type="date"]').forEach(inp => {
     if (!inp.value) inp.value = today();
   });
+  // Auto-generate pond name when opening pond modal
+  if (id === 'modal-pond') autoGeneratePondName();
 }
 
 function closeModal(id) {
@@ -1093,6 +1106,19 @@ function populatePondSelects() {
 }
 
 // ============ POND MANAGEMENT ============
+const speciesPrefixes = {
+  'Catfish': 'CAT', 'Tilapia': 'TIL', 'Salmon': 'SAL',
+  'Carp': 'CAR', 'Mixed': 'MIX', 'Other': 'OTH'
+};
+
+function autoGeneratePondName() {
+  const species = document.getElementById('pond-species').value;
+  const prefix = speciesPrefixes[species] || 'OTH';
+  const existingCount = data.ponds.filter(p => p.name.startsWith(prefix + '-')).length;
+  const nextNum = String(existingCount + 1).padStart(3, '0');
+  document.getElementById('pond-name').value = prefix + '-' + nextNum;
+}
+
 function addPond(e) {
   e.preventDefault();
   const pond = {
@@ -1334,15 +1360,15 @@ function renderDashboard() {
   const profit = totalIncome - totalExpense;
   const survival = totalStocked > 0 ? Math.round(((totalStocked - totalDead) / totalStocked) * 100) : 0;
 
-  document.getElementById('dash-total-fish').textContent = fmt(totalAlive);
+  document.getElementById('dash-total-fish').textContent = fmtNum(totalAlive);
   document.getElementById('dash-ponds').textContent = data.ponds.length;
   document.getElementById('dash-income').textContent = fmt(totalIncome);
   document.getElementById('dash-expense').textContent = fmt(totalExpense);
   document.getElementById('dash-profit').textContent = fmt(profit);
   document.getElementById('dash-profit').style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
-  document.getElementById('dash-stocked').textContent = fmt(totalStocked);
-  document.getElementById('dash-dead').textContent = fmt(totalDead);
-  document.getElementById('dash-harvested').textContent = fmt(totalHarvested);
+  document.getElementById('dash-stocked').textContent = fmtNum(totalStocked);
+  document.getElementById('dash-dead').textContent = fmtNum(totalDead);
+  document.getElementById('dash-harvested').textContent = fmtNum(totalHarvested);
   document.getElementById('dash-survival').textContent = survival + '%';
 
   // Pond overview
@@ -1355,10 +1381,10 @@ function renderDashboard() {
       return `<div class="pond-card">
         <h3>${p.name} <span style="font-size:12px;font-weight:400;color:var(--text-light);">${p.species || ''}</span></h3>
         <div class="pond-stats">
-          <div class="pond-stat">Alive: <strong>${fmt(s.alive)}</strong></div>
-          <div class="pond-stat">Stocked: <strong>${fmt(s.stocked)}</strong></div>
-          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmt(s.dead)}</strong></div>
-          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmt(s.harvested)}</strong></div>
+          <div class="pond-stat">Alive: <strong>${fmtNum(s.alive)}</strong></div>
+          <div class="pond-stat">Stocked: <strong>${fmtNum(s.stocked)}</strong></div>
+          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmtNum(s.dead)}</strong></div>
+          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmtNum(s.harvested)}</strong></div>
         </div>
       </div>`;
     }).join('');
@@ -1405,10 +1431,10 @@ function renderPonds() {
           <button class="btn-delete" onclick="deletePond('${p.id}')" title="Delete">&times;</button>
         </div>
         <div class="pond-stats">
-          <div class="pond-stat">Alive: <strong>${fmt(s.alive)}</strong></div>
-          <div class="pond-stat">Stocked: <strong>${fmt(s.stocked)}</strong></div>
-          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmt(s.dead)}</strong></div>
-          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmt(s.harvested)}</strong></div>
+          <div class="pond-stat">Alive: <strong>${fmtNum(s.alive)}</strong></div>
+          <div class="pond-stat">Stocked: <strong>${fmtNum(s.stocked)}</strong></div>
+          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmtNum(s.dead)}</strong></div>
+          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmtNum(s.harvested)}</strong></div>
         </div>
         <div style="margin-top:8px;display:flex;gap:8px;">
           <button class="btn btn-small btn-success" onclick="openModal('modal-stock');document.getElementById('stock-pond').value='${p.id}'">+ Stock</button>
@@ -1864,7 +1890,35 @@ openModal = function(id) {
   }
 };
 
+// ============ SEED DATA (one-time) ============
+function seedInitialData() {
+  if (localStorage.getItem('shafat_seeded')) return;
+
+  const pond1Id = genId();
+  const pond2Id = genId();
+
+  data.ponds = [
+    { id: pond1Id, name: 'CAT-001', type: 'tarpaulin', size: '12x10x4', species: 'Catfish', notes: '700 capacity package from Lartman Farms', createdAt: '2026-03-18' },
+    { id: pond2Id, name: 'CAT-002', type: 'tarpaulin', size: '18x10x4', species: 'Catfish', notes: '1,000 capacity package from Lartman Farms', createdAt: '2026-03-18' }
+  ];
+
+  data.stockings = [
+    { id: genId(), pondId: pond1Id, qty: 740, date: '2026-03-18', costPer: 14, supplier: 'Lartman Farms', notes: '700 ordered + 40 extra for mortality allowance' },
+    { id: genId(), pondId: pond2Id, qty: 1050, date: '2026-03-18', costPer: 11.43, supplier: 'Lartman Farms', notes: '1000 ordered + 50 extra for mortality allowance' }
+  ];
+
+  data.transactions = [
+    { id: genId(), type: 'expense', category: 'fingerlings', pondId: pond1Id, amount: 9800, date: '2026-03-18', desc: '700 Capacity Package - Lartman Farms (Invoice #00273)' },
+    { id: genId(), type: 'expense', category: 'fingerlings', pondId: pond2Id, amount: 12000, date: '2026-03-18', desc: '1,000 Capacity Package - Lartman Farms (Invoice #00273)' },
+    { id: genId(), type: 'expense', category: 'transport', pondId: '', amount: 900, date: '2026-03-18', desc: 'Transportation x2 - Lartman Farms (Invoice #00273)' }
+  ];
+
+  saveData(data);
+  localStorage.setItem('shafat_seeded', '1');
+}
+
 // ============ INIT ============
+seedInitialData();
 renderDashboard();
 initCloudUI();
 </script>
