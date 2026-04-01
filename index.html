@@ -1834,14 +1834,30 @@ function cloudLoad(url) {
     .then(function(r) { return r.json(); })
     .then(function(response) {
       if (response.success && response.data) {
-        data = { ...getDefaultData(), ...response.data };
-        saveData(data);
-        updateSyncIndicator('connected', 'Synced');
-        showToast('Data loaded from cloud!');
-        refreshPage();
+        // Only overwrite if cloud has actual records
+        const cloud = { ...getDefaultData(), ...response.data };
+        const cloudHasData = cloud.ponds.length > 0 || cloud.transactions.length > 0 || cloud.stockings.length > 0;
+        const localHasData = data.ponds.length > 0 || data.transactions.length > 0 || data.stockings.length > 0;
+
+        if (cloudHasData) {
+          data = cloud;
+          saveData(data);
+          updateSyncIndicator('connected', 'Synced');
+          showToast('Data loaded from cloud!');
+          refreshPage();
+        } else if (localHasData) {
+          // Cloud is empty but we have local data — push it up
+          updateSyncIndicator('connected', 'Synced');
+          cloudSync('save');
+        } else {
+          updateSyncIndicator('connected', 'No data');
+        }
       } else if (response.success && !response.data) {
-        showToast('No cloud data found. Upload first!');
-        updateSyncIndicator('connected', 'No data');
+        // No cloud data at all — if we have local data, push it up
+        if (data.ponds.length > 0 || data.transactions.length > 0) {
+          cloudSync('save');
+        }
+        updateSyncIndicator('connected', 'No cloud data');
       } else {
         updateSyncIndicator('error', 'Load failed');
         showToast('Failed to load: ' + (response.error || 'Unknown error'));
