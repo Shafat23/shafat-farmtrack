@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e7490">
+<title>ShaFat FarmTrack</title>
+<style>
+:root {
+  --primary: #0e7490;
+  --primary-light: #22d3ee;
+  --primary-dark: #064e5e;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --bg: #f0f9ff;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-light: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(14,116,144,0.3);
+}
+.header h1 { font-size: 20px; font-weight: 700; }
+.header small { opacity: 0.8; font-size: 12px; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  display: flex;
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  font-size: 10px;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: color 0.2s;
+  border: none;
+  background: none;
+  gap: 3px;
+}
+.nav-item.active { color: var(--primary); font-weight: 600; }
+.nav-item svg { width: 22px; height: 22px; }
+
+/* Pages */
+.page { display: none; padding: 16px; animation: fadeIn 0.2s; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.stat-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+.stat-card.income .stat-value { color: var(--success); }
+.stat-card.expense .stat-value { color: var(--danger); }
+.stat-card.profit .stat-value { color: var(--primary); }
+
+/* Forms */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text);
+}
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  background: #f8fafc;
+  color: var(--text);
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+}
+.form-group textarea { min-height: 60px; resize: vertical; }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-small { width: auto; padding: 8px 16px; font-size: 13px; border-radius: 8px; }
+
+/* Record Lists */
+.record-list { list-style: none; }
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.record-item:last-child { border-bottom: none; }
+.record-info h4 { font-size: 14px; font-weight: 600; }
+.record-info p { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.record-amount { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.record-amount.income { color: var(--success); }
+.record-amount.expense { color: var(--danger); }
+.record-actions { display: flex; gap: 8px; align-items: center; }
+.btn-delete {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+  opacity: 0.6;
+}
+.btn-delete:hover { opacity: 1; }
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  background: #e2e8f0;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-light);
+  border: none;
+  background: none;
+  transition: all 0.2s;
+}
+.tab.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-light);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.modal-header h2 { font-size: 18px; }
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 4px;
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.filter-bar select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: white;
+  color: var(--text);
+  min-width: 120px;
+}
+
+/* Summary bar */
+.summary-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.summary-chip {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.summary-chip.income { background: #dcfce7; color: var(--success); }
+.summary-chip.expense { background: #fee2e2; color: var(--danger); }
+.summary-chip.net { background: #e0f2fe; color: var(--primary); }
+
+/* Pond selector */
+.pond-badge {
+  display: inline-block;
+  background: #e0f2fe;
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(14,116,144,0.4);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.fab:active { transform: scale(0.9); }
+
+/* Chart container */
+.chart-bar-container { margin-top: 10px; }
+.chart-bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.chart-bar-label { font-size: 12px; width: 60px; text-align: right; color: var(--text-light); }
+.chart-bar-track { flex: 1; background: #e2e8f0; border-radius: 6px; height: 20px; overflow: hidden; }
+.chart-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s; min-width: 2px; }
+.chart-bar-fill.income { background: var(--success); }
+.chart-bar-fill.expense { background: var(--danger); }
+.chart-bar-value { font-size: 12px; width: 70px; font-weight: 600; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: #1e293b;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Pond card */
+.pond-card {
+  background: linear-gradient(135deg, #ecfeff, #f0f9ff);
+  border: 1.5px solid #a5f3fc;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.pond-card h3 { font-size: 16px; color: var(--primary-dark); margin-bottom: 6px; }
+.pond-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.pond-stat { font-size: 12px; color: var(--text-light); }
+.pond-stat strong { color: var(--text); }
+
+/* Data management */
+.data-section { margin-top: 20px; }
+.data-section h3 { margin-bottom: 10px; font-size: 15px; }
+.btn-group { display: flex; gap: 8px; }
+.btn-outline {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Sync indicator */
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  opacity: 0.9;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.15);
+}
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.sync-dot.connected { background: #4ade80; }
+.sync-dot.syncing { background: #facc15; animation: pulse 1s infinite; }
+.sync-dot.error { background: #f87171; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Setup card */
+.setup-card {
+  background: linear-gradient(135deg, #fef3c7, #fef9c3);
+  border: 1.5px solid #fcd34d;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.setup-card h3 { color: #92400e; font-size: 15px; margin-bottom: 8px; }
+.setup-card p { font-size: 13px; color: #78350f; line-height: 1.5; }
+.setup-card ol { font-size: 13px; color: #78350f; padding-left: 20px; line-height: 1.8; }
+.setup-card code {
+  background: rgba(0,0,0,0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h1>ShaFat FarmTrack</h1>
+      <small>ShaFat Farms - Fish Farm Manager</small>
+    </div>
+    <div class="sync-status" onclick="openModal('modal-settings')" id="sync-indicator">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-label">Offline</span>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- ========== DASHBOARD PAGE ========== -->
+<div class="page active" id="page-dashboard">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">&#x1F41F;</div>
+      <div class="stat-value" id="dash-total-fish">0</div>
+      <div class="stat-label">Total Fish</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">&#x1F3E1;</div>
+      <div class="stat-value" id="dash-ponds">0</div>
+      <div class="stat-label">Active Ponds</div>
+    </div>
+    <div class="stat-card income">
+      <div class="stat-icon">&#x1F4B0;</div>
+      <div class="stat-value" id="dash-income">0</div>
+      <div class="stat-label">Total Income</div>
+    </div>
+    <div class="stat-card expense">
+      <div class="stat-icon">&#x1F4B8;</div>
+      <div class="stat-value" id="dash-expense">0</div>
+      <div class="stat-label">Total Expenses</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Profit/Loss</div>
+    <div style="text-align:center;">
+      <div id="dash-profit" style="font-size:28px;font-weight:700;color:var(--primary);">0</div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Net Profit</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Mortality Overview</div>
+    <div style="display:flex;justify-content:space-around;text-align:center;">
+      <div>
+        <div id="dash-stocked" style="font-size:20px;font-weight:700;">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Stocked</div>
+      </div>
+      <div>
+        <div id="dash-dead" style="font-size:20px;font-weight:700;color:var(--danger);">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Dead</div>
+      </div>
+      <div>
+        <div id="dash-harvested" style="font-size:20px;font-weight:700;color:var(--success);">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Harvested</div>
+      </div>
+      <div>
+        <div id="dash-survival" style="font-size:20px;font-weight:700;color:var(--primary);">0%</div>
+        <div style="font-size:11px;color:var(--text-light);">Survival</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Active Ponds</div>
+    <div id="dash-pond-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent Activity</div>
+    <ul class="record-list" id="dash-recent"></ul>
+  </div>
+</div>
+
+<!-- ========== PONDS PAGE ========== -->
+<div class="page" id="page-ponds">
+  <h2 style="margin-bottom:14px;">Ponds & Stock</h2>
+  <div id="pond-list"></div>
+  <button class="btn btn-primary" onclick="openModal('modal-pond')" style="margin-top:10px;">+ Add Pond</button>
+
+  <div style="margin-top:20px;">
+    <h3 style="margin-bottom:10px;font-size:15px;">Mortality Log</h3>
+    <ul class="record-list" id="mortality-list"></ul>
+  </div>
+</div>
+
+<!-- ========== FINANCE PAGE ========== -->
+<div class="page" id="page-finance">
+  <div class="tab-bar">
+    <button class="tab active" onclick="setFinanceTab('all')">All</button>
+    <button class="tab" onclick="setFinanceTab('income')">Income</button>
+    <button class="tab" onclick="setFinanceTab('expense')">Expenses</button>
+  </div>
+
+  <div class="filter-bar">
+    <select id="finance-month" onchange="renderFinance()">
+      <option value="">All Months</option>
+    </select>
+    <select id="finance-pond-filter" onchange="renderFinance()">
+      <option value="">All Ponds</option>
+    </select>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-chip income" id="fin-income">In: 0</div>
+    <div class="summary-chip expense" id="fin-expense">Out: 0</div>
+    <div class="summary-chip net" id="fin-net">Net: 0</div>
+  </div>
+
+  <ul class="record-list" id="finance-list"></ul>
+</div>
+
+<!-- ========== HARVEST & SALES PAGE ========== -->
+<div class="page" id="page-harvest">
+  <div class="tab-bar">
+    <button class="tab active" onclick="setHarvestTab('harvest')">Harvests</button>
+    <button class="tab" onclick="setHarvestTab('sales')">Sales</button>
+  </div>
+
+  <div id="harvest-section">
+    <ul class="record-list" id="harvest-list"></ul>
+  </div>
+  <div id="sales-section" style="display:none;">
+    <ul class="record-list" id="sales-list"></ul>
+  </div>
+</div>
+
+<!-- ========== REPORTS PAGE ========== -->
+<div class="page" id="page-reports">
+  <h2 style="margin-bottom:14px;">Reports</h2>
+
+  <div class="card">
+    <div class="card-title">Monthly Income vs Expenses</div>
+    <div class="chart-bar-container" id="chart-monthly"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Expenses by Category</div>
+    <div class="chart-bar-container" id="chart-categories"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Pond Performance</div>
+    <div id="report-ponds"></div>
+  </div>
+
+  <div class="data-section card">
+    <div class="card-title">Data Management</div>
+    <div class="btn-group">
+      <button class="btn-outline" onclick="exportData()">Export Data</button>
+      <button class="btn-outline" onclick="document.getElementById('import-file').click()">Import Data</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    <button class="btn-outline" style="width:100%;margin-top:10px;color:var(--danger);border-color:var(--danger);" onclick="clearAllData()">Clear All Data</button>
+  </div>
+</div>
+
+<!-- ========== FAB BUTTON ========== -->
+<button class="fab" id="fab-btn" onclick="openFabMenu()">+</button>
+
+<!-- ========== BOTTOM NAV ========== -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10"/></svg>
+    Home
+  </button>
+  <button class="nav-item" onclick="showPage('ponds')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 15c2-2 4-3 6-3s4 1 6 3 4 3 6 3"/><path d="M2 19c2-2 4-3 6-3s4 1 6 3 4 3 6 3"/><circle cx="12" cy="8" r="3"/></svg>
+    Ponds
+  </button>
+  <button class="nav-item" onclick="showPage('finance')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Finance
+  </button>
+  <button class="nav-item" onclick="showPage('harvest')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+    Harvest
+  </button>
+  <button class="nav-item" onclick="showPage('reports')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Reports
+  </button>
+</nav>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Settings / Cloud Sync Modal -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Cloud Sync Settings</h2>
+      <button class="modal-close" onclick="closeModal('modal-settings')">&times;</button>
+    </div>
+
+    <div id="sync-setup-guide" class="setup-card">
+      <h3>Setup Google Sheets Sync (One-time)</h3>
+      <ol>
+        <li>Open <strong>Google Sheets</strong> and create a new blank spreadsheet</li>
+        <li>Click <strong>Extensions &gt; Apps Script</strong></li>
+        <li>Delete any existing code in the editor</li>
+        <li>Open the file <code>google-apps-script.js</code> from this folder (it's in your iCloud Drive alongside this app), copy ALL the code, and paste it into the Apps Script editor</li>
+        <li>Click the <strong>Save</strong> button</li>
+        <li>Click <strong>Deploy &gt; New deployment</strong></li>
+        <li>Click the gear icon, choose <strong>Web app</strong></li>
+        <li>Set "Execute as" to <strong>Me</strong></li>
+        <li>Set "Who has access" to <strong>Anyone</strong></li>
+        <li>Click <strong>Deploy</strong>, then <strong>Authorize access</strong></li>
+        <li>Copy the <strong>Web App URL</strong> and paste it below</li>
+      </ol>
+    </div>
+
+    <div class="form-group">
+      <label>Google Apps Script URL</label>
+      <input type="url" id="settings-script-url" placeholder="https://script.google.com/macros/s/...../exec">
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-primary" onclick="saveCloudSettings()" style="flex:1;">Save & Connect</button>
+      <button class="btn btn-outline" onclick="disconnectCloud()" style="flex:0 0 auto;width:auto;padding:14px 20px;color:var(--danger);">Disconnect</button>
+    </div>
+
+    <div id="sync-status-detail" class="card" style="display:none;">
+      <div class="card-title">Sync Status</div>
+      <p style="font-size:13px;" id="sync-status-text">Not connected</p>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn btn-small btn-primary" onclick="cloudSync('save')">Upload Now</button>
+        <button class="btn btn-small btn-outline" onclick="cloudSync('load')" style="border:1.5px solid var(--border);">Download from Cloud</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB Menu Modal -->
+<div class="modal-overlay" id="modal-fab">
+  <div class="modal" style="padding-bottom:40px;">
+    <div class="modal-header">
+      <h2>Quick Add</h2>
+      <button class="modal-close" onclick="closeModal('modal-fab')">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="btn btn-primary" onclick="closeModal('modal-fab');openModal('modal-pond')">+ New Pond</button>
+      <button class="btn btn-success" onclick="closeModal('modal-fab');openModal('modal-stock')">+ Stock Fish</button>
+      <button class="btn btn-danger" onclick="closeModal('modal-fab');openModal('modal-mortality')">+ Mortality</button>
+      <button class="btn" style="background:var(--warning);color:white;" onclick="closeModal('modal-fab');openModal('modal-finance')">+ Income/Expense</button>
+      <button class="btn" style="background:#7c3aed;color:white;" onclick="closeModal('modal-fab');openModal('modal-harvest')">+ Harvest</button>
+      <button class="btn" style="background:#2563eb;color:white;" onclick="closeModal('modal-fab');openModal('modal-sale')">+ Sale</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Pond Modal -->
+<div class="modal-overlay" id="modal-pond">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Pond</h2>
+      <button class="modal-close" onclick="closeModal('modal-pond')">&times;</button>
+    </div>
+    <form onsubmit="addPond(event)">
+      <div class="form-group">
+        <label>Pond Name</label>
+        <input type="text" id="pond-name" placeholder="e.g. Pond A, Tank 1" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select id="pond-type">
+            <option value="earthen">Earthen Pond</option>
+            <option value="concrete">Concrete Tank</option>
+            <option value="plastic">Plastic Tank</option>
+            <option value="tarpaulin">Tarpaulin</option>
+            <option value="cage">Cage</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Size</label>
+          <input type="text" id="pond-size" placeholder="e.g. 4m x 4m">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Fish Species</label>
+        <input type="text" id="pond-species" placeholder="e.g. Catfish, Tilapia">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="pond-notes" placeholder="Any additional notes..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Pond</button>
+    </form>
+  </div>
+</div>
+
+<!-- Stock Fish Modal -->
+<div class="modal-overlay" id="modal-stock">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Stock Fingerlings</h2>
+      <button class="modal-close" onclick="closeModal('modal-stock')">&times;</button>
+    </div>
+    <form onsubmit="addStock(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="stock-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="stock-qty" placeholder="Number of fish" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="stock-date" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cost per Fish</label>
+          <input type="number" id="stock-cost" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Supplier</label>
+          <input type="text" id="stock-supplier" placeholder="Supplier name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="stock-notes" placeholder="Size, breed details..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Stock Fish</button>
+    </form>
+  </div>
+</div>
+
+<!-- Mortality Modal -->
+<div class="modal-overlay" id="modal-mortality">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Record Mortality</h2>
+      <button class="modal-close" onclick="closeModal('modal-mortality')">&times;</button>
+    </div>
+    <form onsubmit="addMortality(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="mort-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Number Dead</label>
+          <input type="number" id="mort-qty" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="mort-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Cause</label>
+        <select id="mort-cause">
+          <option value="unknown">Unknown</option>
+          <option value="disease">Disease</option>
+          <option value="water_quality">Water Quality</option>
+          <option value="overcrowding">Overcrowding</option>
+          <option value="predator">Predator</option>
+          <option value="handling">Handling Stress</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="mort-notes" placeholder="Details..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-danger">Record Mortality</button>
+    </form>
+  </div>
+</div>
+
+<!-- Finance Modal -->
+<div class="modal-overlay" id="modal-finance">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Transaction</h2>
+      <button class="modal-close" onclick="closeModal('modal-finance')">&times;</button>
+    </div>
+    <form onsubmit="addTransaction(event)">
+      <div class="form-group">
+        <label>Type</label>
+        <div class="tab-bar">
+          <button type="button" class="tab active" id="txn-type-income" onclick="setTxnType('income')">Income</button>
+          <button type="button" class="tab" id="txn-type-expense" onclick="setTxnType('expense')">Expense</button>
+        </div>
+      </div>
+      <input type="hidden" id="txn-type" value="income">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="txn-category">
+          <option value="fish_sales">Fish Sales</option>
+          <option value="other_income">Other Income</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pond (optional)</label>
+        <select id="txn-pond"><option value="">None</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="number" id="txn-amount" placeholder="0.00" step="0.01" required min="0.01">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="txn-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="txn-desc" placeholder="What is this for?">
+      </div>
+      <button type="submit" class="btn btn-primary">Save Transaction</button>
+    </form>
+  </div>
+</div>
+
+<!-- Harvest Modal -->
+<div class="modal-overlay" id="modal-harvest">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Record Harvest</h2>
+      <button class="modal-close" onclick="closeModal('modal-harvest')">&times;</button>
+    </div>
+    <form onsubmit="addHarvest(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="harv-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fish Count</label>
+          <input type="number" id="harv-qty" placeholder="Number of fish" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Total Weight (kg)</label>
+          <input type="number" id="harv-weight" placeholder="0.0" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="harv-date" required>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="harv-notes" placeholder="Avg size, quality..."></textarea>
+      </div>
+      <button type="submit" class="btn" style="background:#7c3aed;color:white;">Record Harvest</button>
+    </form>
+  </div>
+</div>
+
+<!-- Sale Modal -->
+<div class="modal-overlay" id="modal-sale">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Record Sale</h2>
+      <button class="modal-close" onclick="closeModal('modal-sale')">&times;</button>
+    </div>
+    <form onsubmit="addSale(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="sale-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fish Count</label>
+          <input type="number" id="sale-qty" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input type="number" id="sale-weight" placeholder="0.0" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Price per kg</label>
+          <input type="number" id="sale-price" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Total Amount</label>
+          <input type="number" id="sale-total" placeholder="0.00" step="0.01" required min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Buyer</label>
+        <input type="text" id="sale-buyer" placeholder="Customer name">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="sale-date" required>
+      </div>
+      <button type="submit" class="btn" style="background:#2563eb;color:white;">Record Sale</button>
+    </form>
+  </div>
+</div>
+
+
+<script>
+// ============ DATA LAYER ============
+const STORAGE_KEY = 'shafat_farmtrack_data';
+
+function getDefaultData() {
+  return {
+    ponds: [],
+    stockings: [],
+    mortalities: [],
+    transactions: [],
+    harvests: [],
+    sales: [],
+    currency: ''
+  };
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      // Ensure all arrays exist
+      return { ...getDefaultData(), ...d };
+    }
+  } catch(e) {}
+  return getDefaultData();
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+
+// ============ UTILITY ============
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ============ NAVIGATION ============
+let currentPage = 'dashboard';
+
+function showPage(name) {
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((n, i) => {
+    n.classList.toggle('active', ['dashboard','ponds','finance','harvest','reports'][i] === name);
+  });
+  // Show/hide FAB
+  document.getElementById('fab-btn').style.display = 'flex';
+  refreshPage();
+}
+
+function refreshPage() {
+  switch (currentPage) {
+    case 'dashboard': renderDashboard(); break;
+    case 'ponds': renderPonds(); break;
+    case 'finance': renderFinance(); break;
+    case 'harvest': renderHarvestPage(); break;
+    case 'reports': renderReports(); break;
+  }
+}
+
+// ============ MODALS ============
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+  populatePondSelects();
+  // Set default dates
+  document.querySelectorAll('input[type="date"]').forEach(inp => {
+    if (!inp.value) inp.value = today();
+  });
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+function openFabMenu() {
+  openModal('modal-fab');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('active');
+  });
+});
+
+// ============ POND SELECTS ============
+function populatePondSelects() {
+  const selects = ['stock-pond','mort-pond','txn-pond','harv-pond','sale-pond','finance-pond-filter'];
+  selects.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    const isFilter = id.includes('filter');
+    sel.innerHTML = isFilter ? '<option value="">All Ponds</option>' : '';
+    data.ponds.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+    });
+    if (current) sel.value = current;
+  });
+}
+
+// ============ POND MANAGEMENT ============
+function addPond(e) {
+  e.preventDefault();
+  const pond = {
+    id: genId(),
+    name: document.getElementById('pond-name').value.trim(),
+    type: document.getElementById('pond-type').value,
+    size: document.getElementById('pond-size').value.trim(),
+    species: document.getElementById('pond-species').value.trim(),
+    notes: document.getElementById('pond-notes').value.trim(),
+    createdAt: today()
+  };
+  data.ponds.push(pond);
+  saveData(data);
+  closeModal('modal-pond');
+  e.target.reset();
+  showToast('Pond added!');
+  refreshPage();
+}
+
+function deletePond(id) {
+  if (!confirm('Delete this pond and all its records?')) return;
+  data.ponds = data.ponds.filter(p => p.id !== id);
+  data.stockings = data.stockings.filter(s => s.pondId !== id);
+  data.mortalities = data.mortalities.filter(m => m.pondId !== id);
+  data.harvests = data.harvests.filter(h => h.pondId !== id);
+  data.sales = data.sales.filter(s => s.pondId !== id);
+  saveData(data);
+  showToast('Pond deleted');
+  refreshPage();
+}
+
+function getPondName(id) {
+  const p = data.ponds.find(p => p.id === id);
+  return p ? p.name : 'Unknown';
+}
+
+function getPondStats(pondId) {
+  const stocked = data.stockings.filter(s => s.pondId === pondId).reduce((a, s) => a + s.qty, 0);
+  const dead = data.mortalities.filter(m => m.pondId === pondId).reduce((a, m) => a + m.qty, 0);
+  const harvested = data.harvests.filter(h => h.pondId === pondId).reduce((a, h) => a + h.qty, 0);
+  const alive = Math.max(0, stocked - dead - harvested);
+  return { stocked, dead, harvested, alive };
+}
+
+// ============ STOCKING ============
+function addStock(e) {
+  e.preventDefault();
+  const qty = parseInt(document.getElementById('stock-qty').value);
+  const costPer = parseFloat(document.getElementById('stock-cost').value) || 0;
+  const stocking = {
+    id: genId(),
+    pondId: document.getElementById('stock-pond').value,
+    qty: qty,
+    date: document.getElementById('stock-date').value,
+    costPer: costPer,
+    supplier: document.getElementById('stock-supplier').value.trim(),
+    notes: document.getElementById('stock-notes').value.trim()
+  };
+  data.stockings.push(stocking);
+
+  // Auto-add expense if cost > 0
+  if (costPer > 0) {
+    data.transactions.push({
+      id: genId(),
+      type: 'expense',
+      category: 'fingerlings',
+      pondId: stocking.pondId,
+      amount: qty * costPer,
+      date: stocking.date,
+      desc: `Fingerlings for ${getPondName(stocking.pondId)} (${qty} x ${costPer})`
+    });
+  }
+
+  saveData(data);
+  closeModal('modal-stock');
+  e.target.reset();
+  showToast(`${qty} fish stocked!`);
+  refreshPage();
+}
+
+// ============ MORTALITY ============
+function addMortality(e) {
+  e.preventDefault();
+  const mort = {
+    id: genId(),
+    pondId: document.getElementById('mort-pond').value,
+    qty: parseInt(document.getElementById('mort-qty').value),
+    date: document.getElementById('mort-date').value,
+    cause: document.getElementById('mort-cause').value,
+    notes: document.getElementById('mort-notes').value.trim()
+  };
+  data.mortalities.push(mort);
+  saveData(data);
+  closeModal('modal-mortality');
+  e.target.reset();
+  showToast('Mortality recorded');
+  refreshPage();
+}
+
+function deleteMortality(id) {
+  data.mortalities = data.mortalities.filter(m => m.id !== id);
+  saveData(data);
+  showToast('Record deleted');
+  refreshPage();
+}
+
+// ============ TRANSACTIONS ============
+let txnType = 'income';
+const incomeCategories = ['fish_sales','fingerling_sales','other_income'];
+const expenseCategories = ['fingerlings','feed','medication','equipment','labor','transport','utilities','maintenance','other_expense'];
+
+function setTxnType(type) {
+  txnType = type;
+  document.getElementById('txn-type').value = type;
+  document.getElementById('txn-type-income').classList.toggle('active', type === 'income');
+  document.getElementById('txn-type-expense').classList.toggle('active', type === 'expense');
+  const catSel = document.getElementById('txn-category');
+  const cats = type === 'income' ? incomeCategories : expenseCategories;
+  catSel.innerHTML = cats.map(c => `<option value="${c}">${formatCategory(c)}</option>`).join('');
+}
+
+function formatCategory(c) {
+  return c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function addTransaction(e) {
+  e.preventDefault();
+  const txn = {
+    id: genId(),
+    type: document.getElementById('txn-type').value,
+    category: document.getElementById('txn-category').value,
+    pondId: document.getElementById('txn-pond').value || '',
+    amount: parseFloat(document.getElementById('txn-amount').value),
+    date: document.getElementById('txn-date').value,
+    desc: document.getElementById('txn-desc').value.trim()
+  };
+  data.transactions.push(txn);
+  saveData(data);
+  closeModal('modal-finance');
+  e.target.reset();
+  setTxnType('income');
+  showToast('Transaction saved!');
+  refreshPage();
+}
+
+function deleteTransaction(id) {
+  data.transactions = data.transactions.filter(t => t.id !== id);
+  saveData(data);
+  showToast('Transaction deleted');
+  refreshPage();
+}
+
+// ============ HARVEST ============
+function addHarvest(e) {
+  e.preventDefault();
+  const harvest = {
+    id: genId(),
+    pondId: document.getElementById('harv-pond').value,
+    qty: parseInt(document.getElementById('harv-qty').value),
+    weight: parseFloat(document.getElementById('harv-weight').value) || 0,
+    date: document.getElementById('harv-date').value,
+    notes: document.getElementById('harv-notes').value.trim()
+  };
+  data.harvests.push(harvest);
+  saveData(data);
+  closeModal('modal-harvest');
+  e.target.reset();
+  showToast('Harvest recorded!');
+  refreshPage();
+}
+
+function deleteHarvest(id) {
+  data.harvests = data.harvests.filter(h => h.id !== id);
+  saveData(data);
+  showToast('Record deleted');
+  refreshPage();
+}
+
+// ============ SALES ============
+function addSale(e) {
+  e.preventDefault();
+  const total = parseFloat(document.getElementById('sale-total').value);
+  const sale = {
+    id: genId(),
+    pondId: document.getElementById('sale-pond').value,
+    qty: parseInt(document.getElementById('sale-qty').value),
+    weight: parseFloat(document.getElementById('sale-weight').value) || 0,
+    pricePerKg: parseFloat(document.getElementById('sale-price').value) || 0,
+    total: total,
+    buyer: document.getElementById('sale-buyer').value.trim(),
+    date: document.getElementById('sale-date').value
+  };
+  data.sales.push(sale);
+
+  // Auto-add income
+  data.transactions.push({
+    id: genId(),
+    type: 'income',
+    category: 'fish_sales',
+    pondId: sale.pondId,
+    amount: total,
+    date: sale.date,
+    desc: `Sale to ${sale.buyer || 'customer'}: ${sale.qty} fish, ${sale.weight}kg`
+  });
+
+  saveData(data);
+  closeModal('modal-sale');
+  e.target.reset();
+  showToast('Sale recorded!');
+  refreshPage();
+}
+
+function deleteSale(id) {
+  data.sales = data.sales.filter(s => s.id !== id);
+  saveData(data);
+  showToast('Record deleted');
+  refreshPage();
+}
+
+// Auto-calculate sale total
+document.getElementById('sale-weight').addEventListener('input', calcSaleTotal);
+document.getElementById('sale-price').addEventListener('input', calcSaleTotal);
+function calcSaleTotal() {
+  const w = parseFloat(document.getElementById('sale-weight').value) || 0;
+  const p = parseFloat(document.getElementById('sale-price').value) || 0;
+  if (w > 0 && p > 0) {
+    document.getElementById('sale-total').value = (w * p).toFixed(2);
+  }
+}
+
+// ============ RENDER: DASHBOARD ============
+function renderDashboard() {
+  const totalStocked = data.stockings.reduce((a, s) => a + s.qty, 0);
+  const totalDead = data.mortalities.reduce((a, m) => a + m.qty, 0);
+  const totalHarvested = data.harvests.reduce((a, h) => a + h.qty, 0);
+  const totalAlive = Math.max(0, totalStocked - totalDead - totalHarvested);
+  const totalIncome = data.transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
+  const totalExpense = data.transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+  const profit = totalIncome - totalExpense;
+  const survival = totalStocked > 0 ? Math.round(((totalStocked - totalDead) / totalStocked) * 100) : 0;
+
+  document.getElementById('dash-total-fish').textContent = fmt(totalAlive);
+  document.getElementById('dash-ponds').textContent = data.ponds.length;
+  document.getElementById('dash-income').textContent = fmt(totalIncome);
+  document.getElementById('dash-expense').textContent = fmt(totalExpense);
+  document.getElementById('dash-profit').textContent = fmt(profit);
+  document.getElementById('dash-profit').style.color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('dash-stocked').textContent = fmt(totalStocked);
+  document.getElementById('dash-dead').textContent = fmt(totalDead);
+  document.getElementById('dash-harvested').textContent = fmt(totalHarvested);
+  document.getElementById('dash-survival').textContent = survival + '%';
+
+  // Pond overview
+  const pondListEl = document.getElementById('dash-pond-list');
+  if (data.ponds.length === 0) {
+    pondListEl.innerHTML = '<div class="empty-state"><div class="icon">&#x1F3E1;</div><p>No ponds yet. Tap + to add one!</p></div>';
+  } else {
+    pondListEl.innerHTML = data.ponds.map(p => {
+      const s = getPondStats(p.id);
+      return `<div class="pond-card">
+        <h3>${p.name} <span style="font-size:12px;font-weight:400;color:var(--text-light);">${p.species || ''}</span></h3>
+        <div class="pond-stats">
+          <div class="pond-stat">Alive: <strong>${fmt(s.alive)}</strong></div>
+          <div class="pond-stat">Stocked: <strong>${fmt(s.stocked)}</strong></div>
+          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmt(s.dead)}</strong></div>
+          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmt(s.harvested)}</strong></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent activity
+  const recentEl = document.getElementById('dash-recent');
+  const allEvents = [
+    ...data.stockings.map(s => ({ date: s.date, text: `Stocked ${s.qty} in ${getPondName(s.pondId)}`, type: 'stock' })),
+    ...data.mortalities.map(m => ({ date: m.date, text: `${m.qty} died in ${getPondName(m.pondId)}`, type: 'mort' })),
+    ...data.transactions.map(t => ({ date: t.date, text: `${t.type === 'income' ? '+' : '-'}${fmt(t.amount)} - ${t.desc || formatCategory(t.category)}`, type: t.type })),
+    ...data.harvests.map(h => ({ date: h.date, text: `Harvested ${h.qty} from ${getPondName(h.pondId)}`, type: 'harvest' })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8);
+
+  if (allEvents.length === 0) {
+    recentEl.innerHTML = '<div class="empty-state"><p>No activity yet. Start by adding a pond!</p></div>';
+  } else {
+    recentEl.innerHTML = allEvents.map(ev => `
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${ev.text}</h4>
+          <p>${fmtDate(ev.date)}</p>
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: PONDS ============
+function renderPonds() {
+  const el = document.getElementById('pond-list');
+  if (data.ponds.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#x1F41F;</div><p>No ponds yet. Add your first pond to get started!</p></div>';
+  } else {
+    el.innerHTML = data.ponds.map(p => {
+      const s = getPondStats(p.id);
+      return `<div class="pond-card">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div>
+            <h3>${p.name}</h3>
+            <div style="font-size:12px;color:var(--text-light);margin-bottom:6px;">
+              ${p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : ''} ${p.size ? '&middot; ' + p.size : ''} ${p.species ? '&middot; ' + p.species : ''}
+            </div>
+          </div>
+          <button class="btn-delete" onclick="deletePond('${p.id}')" title="Delete">&times;</button>
+        </div>
+        <div class="pond-stats">
+          <div class="pond-stat">Alive: <strong>${fmt(s.alive)}</strong></div>
+          <div class="pond-stat">Stocked: <strong>${fmt(s.stocked)}</strong></div>
+          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmt(s.dead)}</strong></div>
+          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmt(s.harvested)}</strong></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-small btn-success" onclick="openModal('modal-stock');document.getElementById('stock-pond').value='${p.id}'">+ Stock</button>
+          <button class="btn btn-small btn-danger" onclick="openModal('modal-mortality');document.getElementById('mort-pond').value='${p.id}'">+ Mortality</button>
+          <button class="btn btn-small" style="background:#7c3aed;color:white;" onclick="openModal('modal-harvest');document.getElementById('harv-pond').value='${p.id}'">+ Harvest</button>
+        </div>
+        ${p.notes ? `<div style="font-size:12px;color:var(--text-light);margin-top:8px;">${p.notes}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Mortality log
+  const mortEl = document.getElementById('mortality-list');
+  const morts = [...data.mortalities].sort((a, b) => b.date.localeCompare(a.date));
+  if (morts.length === 0) {
+    mortEl.innerHTML = '<div class="empty-state"><p>No mortality records</p></div>';
+  } else {
+    mortEl.innerHTML = morts.map(m => `
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${m.qty} fish - ${getPondName(m.pondId)}</h4>
+          <p>${fmtDate(m.date)} &middot; ${formatCategory(m.cause)}${m.notes ? ' &middot; ' + m.notes : ''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount expense">-${m.qty}</span>
+          <button class="btn-delete" onclick="deleteMortality('${m.id}')">&times;</button>
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: FINANCE ============
+let financeFilter = 'all';
+
+function setFinanceTab(tab) {
+  financeFilter = tab;
+  document.querySelectorAll('#page-finance .tab-bar .tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  renderFinance();
+}
+
+function renderFinance() {
+  populateMonthFilter();
+  const monthFilter = document.getElementById('finance-month').value;
+  const pondFilter = document.getElementById('finance-pond-filter').value;
+
+  let txns = [...data.transactions].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (financeFilter !== 'all') txns = txns.filter(t => t.type === financeFilter);
+  if (monthFilter) txns = txns.filter(t => t.date.substring(0, 7) === monthFilter);
+  if (pondFilter) txns = txns.filter(t => t.pondId === pondFilter);
+
+  const totalIn = txns.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
+  const totalOut = txns.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+
+  document.getElementById('fin-income').textContent = `In: ${fmt(totalIn)}`;
+  document.getElementById('fin-expense').textContent = `Out: ${fmt(totalOut)}`;
+  document.getElementById('fin-net').textContent = `Net: ${fmt(totalIn - totalOut)}`;
+
+  const el = document.getElementById('finance-list');
+  if (txns.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4B0;</div><p>No transactions yet</p></div>';
+  } else {
+    el.innerHTML = txns.map(t => `
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${t.desc || formatCategory(t.category)}</h4>
+          <p>${fmtDate(t.date)}${t.pondId ? ' &middot; ' + getPondName(t.pondId) : ''} &middot; ${formatCategory(t.category)}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</span>
+          <button class="btn-delete" onclick="deleteTransaction('${t.id}')">&times;</button>
+        </div>
+      </li>`).join('');
+  }
+}
+
+function populateMonthFilter() {
+  const sel = document.getElementById('finance-month');
+  const months = [...new Set(data.transactions.map(t => t.date.substring(0, 7)))].sort().reverse();
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All Months</option>' + months.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (current) sel.value = current;
+}
+
+// ============ RENDER: HARVEST & SALES ============
+let harvestTab = 'harvest';
+
+function setHarvestTab(tab) {
+  harvestTab = tab;
+  document.querySelectorAll('#page-harvest .tab-bar .tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('harvest-section').style.display = tab === 'harvest' ? 'block' : 'none';
+  document.getElementById('sales-section').style.display = tab === 'sales' ? 'block' : 'none';
+  renderHarvestPage();
+}
+
+function renderHarvestPage() {
+  // Harvests
+  const harvEl = document.getElementById('harvest-list');
+  const harvests = [...data.harvests].sort((a, b) => b.date.localeCompare(a.date));
+  if (harvests.length === 0) {
+    harvEl.innerHTML = '<div class="empty-state"><div class="icon">&#x1F3A3;</div><p>No harvests recorded yet</p></div>';
+  } else {
+    harvEl.innerHTML = harvests.map(h => `
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${h.qty} fish from ${getPondName(h.pondId)}</h4>
+          <p>${fmtDate(h.date)}${h.weight ? ' &middot; ' + h.weight + 'kg' : ''}${h.notes ? ' &middot; ' + h.notes : ''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount" style="color:var(--primary);">${h.weight ? h.weight + 'kg' : h.qty + ' fish'}</span>
+          <button class="btn-delete" onclick="deleteHarvest('${h.id}')">&times;</button>
+        </div>
+      </li>`).join('');
+  }
+
+  // Sales
+  const salesEl = document.getElementById('sales-list');
+  const sales = [...data.sales].sort((a, b) => b.date.localeCompare(a.date));
+  if (sales.length === 0) {
+    salesEl.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4B5;</div><p>No sales recorded yet</p></div>';
+  } else {
+    salesEl.innerHTML = sales.map(s => `
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${s.qty} fish ${s.buyer ? 'to ' + s.buyer : ''}</h4>
+          <p>${fmtDate(s.date)} &middot; ${getPondName(s.pondId)}${s.weight ? ' &middot; ' + s.weight + 'kg' : ''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount income">+${fmt(s.total)}</span>
+          <button class="btn-delete" onclick="deleteSale('${s.id}')">&times;</button>
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: REPORTS ============
+function renderReports() {
+  renderMonthlyChart();
+  renderCategoryChart();
+  renderPondReport();
+}
+
+function renderMonthlyChart() {
+  const el = document.getElementById('chart-monthly');
+  const months = {};
+  data.transactions.forEach(t => {
+    const m = t.date.substring(0, 7);
+    if (!months[m]) months[m] = { income: 0, expense: 0 };
+    months[m][t.type] += t.amount;
+  });
+
+  const sorted = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).reverse();
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p>No data yet</p></div>';
+    return;
+  }
+
+  const maxVal = Math.max(...sorted.map(([, v]) => Math.max(v.income, v.expense)), 1);
+  el.innerHTML = sorted.map(([month, vals]) => `
+    <div class="chart-bar-row">
+      <div class="chart-bar-label">${month.slice(5)}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <div class="chart-bar-track"><div class="chart-bar-fill income" style="width:${(vals.income / maxVal * 100)}%"></div></div>
+          <span style="font-size:11px;color:var(--success);width:60px;">${fmt(vals.income)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="chart-bar-track"><div class="chart-bar-fill expense" style="width:${(vals.expense / maxVal * 100)}%"></div></div>
+          <span style="font-size:11px;color:var(--danger);width:60px;">${fmt(vals.expense)}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCategoryChart() {
+  const el = document.getElementById('chart-categories');
+  const cats = {};
+  data.transactions.filter(t => t.type === 'expense').forEach(t => {
+    const c = formatCategory(t.category);
+    cats[c] = (cats[c] || 0) + t.amount;
+  });
+
+  const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p>No expense data</p></div>';
+    return;
+  }
+
+  const maxVal = Math.max(...sorted.map(([, v]) => v), 1);
+  el.innerHTML = sorted.map(([cat, val]) => `
+    <div class="chart-bar-row">
+      <div class="chart-bar-label" style="width:90px;font-size:11px;">${cat}</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill expense" style="width:${(val / maxVal * 100)}%"></div></div>
+      <div class="chart-bar-value" style="color:var(--danger);">${fmt(val)}</div>
+    </div>`).join('');
+}
+
+function renderPondReport() {
+  const el = document.getElementById('report-ponds');
+  if (data.ponds.length === 0) {
+    el.innerHTML = '<div class="empty-state"><p>No ponds</p></div>';
+    return;
+  }
+
+  el.innerHTML = data.ponds.map(p => {
+    const s = getPondStats(p.id);
+    const income = data.transactions.filter(t => t.pondId === p.id && t.type === 'income').reduce((a, t) => a + t.amount, 0);
+    const expense = data.transactions.filter(t => t.pondId === p.id && t.type === 'expense').reduce((a, t) => a + t.amount, 0);
+    const survivalRate = s.stocked > 0 ? Math.round(((s.stocked - s.dead) / s.stocked) * 100) : 0;
+    const totalWeight = data.harvests.filter(h => h.pondId === p.id).reduce((a, h) => a + (h.weight || 0), 0);
+
+    return `<div class="pond-card" style="margin-bottom:10px;">
+      <h3>${p.name}</h3>
+      <div class="pond-stats" style="margin-top:6px;">
+        <div class="pond-stat">Survival: <strong>${survivalRate}%</strong></div>
+        <div class="pond-stat">Harvested: <strong>${totalWeight}kg</strong></div>
+        <div class="pond-stat">Income: <strong style="color:var(--success);">${fmt(income)}</strong></div>
+        <div class="pond-stat">Expenses: <strong style="color:var(--danger);">${fmt(expense)}</strong></div>
+        <div class="pond-stat">Profit: <strong style="color:${income - expense >= 0 ? 'var(--success)' : 'var(--danger)'};">${fmt(income - expense)}</strong></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============ DATA MANAGEMENT ============
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `shafat-farmtrack-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data exported!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.ponds || imported.transactions) {
+        data = { ...getDefaultData(), ...imported };
+        saveData(data);
+        showToast('Data imported!');
+        refreshPage();
+      } else {
+        showToast('Invalid file format');
+      }
+    } catch(err) {
+      showToast('Error reading file');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearAllData() {
+  if (!confirm('Are you sure? This will delete ALL your data permanently!')) return;
+  if (!confirm('Really delete everything? This cannot be undone!')) return;
+  data = getDefaultData();
+  saveData(data);
+  showToast('All data cleared');
+  refreshPage();
+}
+
+// ============ CLOUD SYNC ============
+const CLOUD_URL_KEY = 'shafat_cloud_url';
+
+function getCloudUrl() {
+  return localStorage.getItem(CLOUD_URL_KEY) || '';
+}
+
+function updateSyncIndicator(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+function saveCloudSettings() {
+  const url = document.getElementById('settings-script-url').value.trim();
+  if (!url) {
+    showToast('Please enter the Apps Script URL');
+    return;
+  }
+  localStorage.setItem(CLOUD_URL_KEY, url);
+  showToast('Connected! Syncing...');
+  closeModal('modal-settings');
+  cloudSync('save');
+}
+
+function disconnectCloud() {
+  localStorage.removeItem(CLOUD_URL_KEY);
+  updateSyncIndicator('', 'Offline');
+  document.getElementById('sync-status-detail').style.display = 'none';
+  document.getElementById('settings-script-url').value = '';
+  showToast('Cloud sync disconnected');
+}
+
+function cloudSync(action) {
+  const url = getCloudUrl();
+  if (!url) {
+    updateSyncIndicator('', 'Offline');
+    return;
+  }
+
+  updateSyncIndicator('syncing', 'Syncing...');
+
+  if (action === 'save') {
+    const jsonData = JSON.stringify(data);
+    const callbackName = 'fishtrack_cb_' + Date.now();
+
+    window[callbackName] = function(response) {
+      delete window[callbackName];
+      const scriptEl = document.getElementById('sync-script');
+      if (scriptEl) scriptEl.remove();
+
+      if (response && response.success) {
+        updateSyncIndicator('connected', 'Synced');
+        const statusText = document.getElementById('sync-status-text');
+        statusText.textContent = 'Last synced: ' + new Date().toLocaleString();
+        showToast('Saved to cloud!');
+      } else {
+        updateSyncIndicator('error', 'Sync failed');
+        showToast('Cloud save failed: ' + (response ? response.error : 'Unknown error'));
+      }
+    };
+
+    // Use JSONP approach via script tag (works cross-origin without CORS issues)
+    const script = document.createElement('script');
+    script.id = 'sync-script';
+    // POST via form to handle large data, then poll with GET
+    // Actually, for simplicity use a form POST in a hidden iframe
+    cloudPost(url, jsonData);
+  } else if (action === 'load') {
+    cloudLoad(url);
+  }
+}
+
+function cloudPost(url, jsonData) {
+  // Use fetch with no-cors mode won't work for reading response
+  // Instead, use a hidden form POST to an iframe, then load via GET
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url + '?action=save';
+  form.target = 'sync-frame';
+  form.style.display = 'none';
+
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'data';
+  input.value = jsonData;
+  form.appendChild(input);
+
+  let iframe = document.getElementById('sync-frame');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.name = 'sync-frame';
+    iframe.id = 'sync-frame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+
+  document.body.appendChild(form);
+
+  iframe.onload = function() {
+    updateSyncIndicator('connected', 'Synced');
+    const statusText = document.getElementById('sync-status-text');
+    statusText.textContent = 'Last synced: ' + new Date().toLocaleString();
+    showToast('Saved to cloud!');
+    form.remove();
+  };
+
+  // Timeout fallback
+  setTimeout(function() {
+    if (document.body.contains(form)) {
+      updateSyncIndicator('connected', 'Synced');
+      showToast('Saved to cloud!');
+      form.remove();
+    }
+  }, 8000);
+
+  form.submit();
+}
+
+function cloudLoad(url) {
+  updateSyncIndicator('syncing', 'Loading...');
+
+  // Use script tag JSONP-style won't work with Apps Script
+  // Use a dynamic script to fetch via redirect
+  fetch(url + '?action=load', { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(response) {
+      if (response.success && response.data) {
+        data = { ...getDefaultData(), ...response.data };
+        saveData(data);
+        updateSyncIndicator('connected', 'Synced');
+        showToast('Data loaded from cloud!');
+        refreshPage();
+      } else if (response.success && !response.data) {
+        showToast('No cloud data found. Upload first!');
+        updateSyncIndicator('connected', 'No data');
+      } else {
+        updateSyncIndicator('error', 'Load failed');
+        showToast('Failed to load: ' + (response.error || 'Unknown error'));
+      }
+    })
+    .catch(function(err) {
+      updateSyncIndicator('error', 'Error');
+      showToast('Could not connect to cloud');
+      console.error('Cloud load error:', err);
+    });
+}
+
+// Auto-sync after every data change
+const _origSaveData = saveData;
+saveData = function(d) {
+  _origSaveData(d);
+  // Debounce cloud sync
+  clearTimeout(window._syncTimer);
+  window._syncTimer = setTimeout(function() {
+    if (getCloudUrl()) {
+      cloudSync('save');
+    }
+  }, 2000);
+};
+
+// Init cloud UI
+function initCloudUI() {
+  const url = getCloudUrl();
+  if (url) {
+    document.getElementById('settings-script-url').value = url;
+    document.getElementById('sync-status-detail').style.display = 'block';
+    updateSyncIndicator('connected', 'Connected');
+    // Try loading from cloud on first visit
+    cloudLoad(url);
+  }
+}
+
+// When opening settings modal, populate
+const _origOpenModal = openModal;
+openModal = function(id) {
+  _origOpenModal(id);
+  if (id === 'modal-settings') {
+    const url = getCloudUrl();
+    document.getElementById('settings-script-url').value = url;
+    document.getElementById('sync-status-detail').style.display = url ? 'block' : 'none';
+  }
+};
+
+// ============ INIT ============
+renderDashboard();
+initCloudUI();
+</script>
+</body>
+</html>
