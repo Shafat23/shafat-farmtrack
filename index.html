@@ -1234,9 +1234,9 @@ function getPondName(id) {
 }
 
 function getPondStats(pondId) {
-  const stocked = data.stockings.filter(s => s.pondId === pondId).reduce((a, s) => a + s.qty, 0);
-  const dead = data.mortalities.filter(m => m.pondId === pondId).reduce((a, m) => a + m.qty, 0);
-  const harvested = data.harvests.filter(h => h.pondId === pondId).reduce((a, h) => a + h.qty, 0);
+  const stocked = data.stockings.filter(s => s.pondId === pondId).reduce((a, s) => a + Number(s.qty), 0);
+  const dead = data.mortalities.filter(m => m.pondId === pondId).reduce((a, m) => a + Number(m.qty), 0);
+  const harvested = data.harvests.filter(h => h.pondId === pondId).reduce((a, h) => a + Number(h.qty), 0);
   const alive = Math.max(0, stocked - dead - harvested);
   return { stocked, dead, harvested, alive };
 }
@@ -1537,14 +1537,14 @@ function calcSaleTotal() {
 
 // ============ RENDER: DASHBOARD ============
 function renderDashboard() {
-  const totalStocked = data.stockings.reduce((a, s) => a + s.qty, 0);
-  const totalDead = data.mortalities.reduce((a, m) => a + m.qty, 0);
-  const totalHarvested = data.harvests.reduce((a, h) => a + h.qty, 0);
+  const totalStocked = data.stockings.reduce((a, s) => a + Number(s.qty), 0);
+  const totalDead = data.mortalities.reduce((a, m) => a + Number(m.qty), 0);
+  const totalHarvested = data.harvests.reduce((a, h) => a + Number(h.qty), 0);
   const totalAlive = Math.max(0, totalStocked - totalDead - totalHarvested);
   const totalIncome = data.transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0);
   const totalExpense = data.transactions.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0);
   const profit = totalIncome - totalExpense;
-  const survival = totalStocked > 0 ? Math.round(((totalStocked - totalDead) / totalStocked) * 100) : 0;
+  const survival = totalStocked > 0 ? (((totalStocked - totalDead) / totalStocked) * 100).toFixed(1) : '0.0';
 
   document.getElementById('dash-total-fish').textContent = fmtNum(totalAlive);
   document.getElementById('dash-ponds').textContent = data.ponds.length;
@@ -1836,7 +1836,7 @@ function renderPondReport() {
     const s = getPondStats(p.id);
     const income = data.transactions.filter(t => t.pondId === p.id && t.type === 'income').reduce((a, t) => a + t.amount, 0);
     const expense = data.transactions.filter(t => t.pondId === p.id && t.type === 'expense').reduce((a, t) => a + t.amount, 0);
-    const survivalRate = s.stocked > 0 ? Math.round(((s.stocked - s.dead) / s.stocked) * 100) : 0;
+    const survivalRate = s.stocked > 0 ? (((s.stocked - s.dead) / s.stocked) * 100).toFixed(1) : '0.0';
     const totalWeight = data.harvests.filter(h => h.pondId === p.id).reduce((a, h) => a + (h.weight || 0), 0);
 
     return `<div class="pond-card" style="margin-bottom:10px;">
