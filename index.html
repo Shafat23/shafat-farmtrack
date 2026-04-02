@@ -194,6 +194,16 @@ body {
 .record-amount.income { color: var(--success); }
 .record-amount.expense { color: var(--danger); }
 .record-actions { display: flex; gap: 8px; align-items: center; }
+.btn-edit {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  opacity: 0.6;
+}
+.btn-edit:hover { opacity: 1; }
 .btn-delete {
   background: none;
   border: none;
@@ -1076,6 +1086,32 @@ function openModal(id) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
+  // Reset edit mode and restore modal titles
+  if (editMode.type) {
+    clearEditMode();
+    resetModalTitles();
+  }
+}
+
+function resetModalTitles() {
+  const titles = {
+    'modal-pond': ['Add Pond', 'Add Pond'],
+    'modal-mortality': ['Record Mortality', 'Record Mortality'],
+    'modal-finance': ['Add Transaction', 'Save Transaction'],
+    'modal-harvest': ['Record Harvest', 'Record Harvest'],
+    'modal-sale': ['Record Sale', 'Record Sale']
+  };
+  Object.entries(titles).forEach(([modalId, [heading, btn]]) => {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    const h2 = modal.querySelector('h2');
+    if (h2) h2.textContent = heading;
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.textContent = btn;
+  });
+  // Restore pond name readonly
+  const pondNameInput = document.getElementById('pond-name');
+  if (pondNameInput) pondNameInput.setAttribute('readonly', '');
 }
 
 function openFabMenu() {
@@ -1085,7 +1121,10 @@ function openFabMenu() {
 // Close modal on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.classList.remove('active');
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+      if (editMode.type) { clearEditMode(); resetModalTitles(); }
+    }
   });
 });
 
@@ -1097,12 +1136,20 @@ function populatePondSelects() {
     if (!sel) return;
     const current = sel.value;
     const isFilter = id.includes('filter');
-    sel.innerHTML = isFilter ? '<option value="">All Ponds</option>' : '';
+    const isOptional = id === 'txn-pond';
+    sel.innerHTML = isFilter ? '<option value="">All Ponds</option>' : isOptional ? '<option value="">None</option>' : '';
     data.ponds.forEach(p => {
       sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
     });
     if (current) sel.value = current;
   });
+}
+
+// ============ EDIT MODE TRACKING ============
+let editMode = { type: null, id: null };
+
+function clearEditMode() {
+  editMode = { type: null, id: null };
 }
 
 // ============ POND MANAGEMENT ============
@@ -1121,21 +1168,52 @@ function autoGeneratePondName() {
 
 function addPond(e) {
   e.preventDefault();
-  const pond = {
-    id: genId(),
-    name: document.getElementById('pond-name').value.trim(),
-    type: document.getElementById('pond-type').value,
-    size: document.getElementById('pond-size').value.trim(),
-    species: document.getElementById('pond-species').value.trim(),
-    notes: document.getElementById('pond-notes').value.trim(),
-    createdAt: today()
-  };
-  data.ponds.push(pond);
-  saveData(data);
-  closeModal('modal-pond');
-  e.target.reset();
-  showToast('Pond added!');
+  if (editMode.type === 'pond') {
+    const p = data.ponds.find(p => p.id === editMode.id);
+    if (p) {
+      p.name = document.getElementById('pond-name').value.trim();
+      p.type = document.getElementById('pond-type').value;
+      p.size = document.getElementById('pond-size').value.trim();
+      p.species = document.getElementById('pond-species').value.trim();
+      p.notes = document.getElementById('pond-notes').value.trim();
+    }
+    clearEditMode();
+    saveData(data);
+    closeModal('modal-pond');
+    e.target.reset();
+    showToast('Pond updated!');
+  } else {
+    const pond = {
+      id: genId(),
+      name: document.getElementById('pond-name').value.trim(),
+      type: document.getElementById('pond-type').value,
+      size: document.getElementById('pond-size').value.trim(),
+      species: document.getElementById('pond-species').value.trim(),
+      notes: document.getElementById('pond-notes').value.trim(),
+      createdAt: today()
+    };
+    data.ponds.push(pond);
+    saveData(data);
+    closeModal('modal-pond');
+    e.target.reset();
+    showToast('Pond added!');
+  }
   refreshPage();
+}
+
+function editPond(id) {
+  const p = data.ponds.find(p => p.id === id);
+  if (!p) return;
+  editMode = { type: 'pond', id: id };
+  openModal('modal-pond');
+  document.getElementById('pond-species').value = p.species;
+  document.getElementById('pond-name').value = p.name;
+  document.getElementById('pond-name').removeAttribute('readonly');
+  document.getElementById('pond-type').value = p.type;
+  document.getElementById('pond-size').value = p.size;
+  document.getElementById('pond-notes').value = p.notes || '';
+  document.querySelector('#modal-pond h2').textContent = 'Edit Pond';
+  document.querySelector('#modal-pond .btn-primary').textContent = 'Save Changes';
 }
 
 function deletePond(id) {
@@ -1202,20 +1280,46 @@ function addStock(e) {
 // ============ MORTALITY ============
 function addMortality(e) {
   e.preventDefault();
-  const mort = {
-    id: genId(),
-    pondId: document.getElementById('mort-pond').value,
-    qty: parseInt(document.getElementById('mort-qty').value),
-    date: document.getElementById('mort-date').value,
-    cause: document.getElementById('mort-cause').value,
-    notes: document.getElementById('mort-notes').value.trim()
-  };
-  data.mortalities.push(mort);
+  if (editMode.type === 'mortality') {
+    const m = data.mortalities.find(m => m.id === editMode.id);
+    if (m) {
+      m.pondId = document.getElementById('mort-pond').value;
+      m.qty = parseInt(document.getElementById('mort-qty').value);
+      m.date = document.getElementById('mort-date').value;
+      m.cause = document.getElementById('mort-cause').value;
+      m.notes = document.getElementById('mort-notes').value.trim();
+    }
+    clearEditMode();
+    showToast('Mortality updated!');
+  } else {
+    data.mortalities.push({
+      id: genId(),
+      pondId: document.getElementById('mort-pond').value,
+      qty: parseInt(document.getElementById('mort-qty').value),
+      date: document.getElementById('mort-date').value,
+      cause: document.getElementById('mort-cause').value,
+      notes: document.getElementById('mort-notes').value.trim()
+    });
+    showToast('Mortality recorded');
+  }
   saveData(data);
   closeModal('modal-mortality');
   e.target.reset();
-  showToast('Mortality recorded');
   refreshPage();
+}
+
+function editMortality(id) {
+  const m = data.mortalities.find(m => m.id === id);
+  if (!m) return;
+  editMode = { type: 'mortality', id: id };
+  openModal('modal-mortality');
+  document.getElementById('mort-pond').value = m.pondId;
+  document.getElementById('mort-qty').value = m.qty;
+  document.getElementById('mort-date').value = m.date;
+  document.getElementById('mort-cause').value = m.cause;
+  document.getElementById('mort-notes').value = m.notes || '';
+  document.querySelector('#modal-mortality h2').textContent = 'Edit Mortality';
+  document.querySelector('#modal-mortality .btn-danger').textContent = 'Save Changes';
 }
 
 function deleteMortality(id) {
@@ -1246,22 +1350,50 @@ function formatCategory(c) {
 
 function addTransaction(e) {
   e.preventDefault();
-  const txn = {
-    id: genId(),
-    type: document.getElementById('txn-type').value,
-    category: document.getElementById('txn-category').value,
-    pondId: document.getElementById('txn-pond').value || '',
-    amount: parseFloat(document.getElementById('txn-amount').value),
-    date: document.getElementById('txn-date').value,
-    desc: document.getElementById('txn-desc').value.trim()
-  };
-  data.transactions.push(txn);
+  if (editMode.type === 'transaction') {
+    const t = data.transactions.find(t => t.id === editMode.id);
+    if (t) {
+      t.type = document.getElementById('txn-type').value;
+      t.category = document.getElementById('txn-category').value;
+      t.pondId = document.getElementById('txn-pond').value || '';
+      t.amount = parseFloat(document.getElementById('txn-amount').value);
+      t.date = document.getElementById('txn-date').value;
+      t.desc = document.getElementById('txn-desc').value.trim();
+    }
+    clearEditMode();
+    showToast('Transaction updated!');
+  } else {
+    data.transactions.push({
+      id: genId(),
+      type: document.getElementById('txn-type').value,
+      category: document.getElementById('txn-category').value,
+      pondId: document.getElementById('txn-pond').value || '',
+      amount: parseFloat(document.getElementById('txn-amount').value),
+      date: document.getElementById('txn-date').value,
+      desc: document.getElementById('txn-desc').value.trim()
+    });
+    showToast('Transaction saved!');
+  }
   saveData(data);
   closeModal('modal-finance');
   e.target.reset();
   setTxnType('income');
-  showToast('Transaction saved!');
   refreshPage();
+}
+
+function editTransaction(id) {
+  const t = data.transactions.find(t => t.id === id);
+  if (!t) return;
+  editMode = { type: 'transaction', id: id };
+  openModal('modal-finance');
+  setTxnType(t.type);
+  document.getElementById('txn-category').value = t.category;
+  document.getElementById('txn-pond').value = t.pondId;
+  document.getElementById('txn-amount').value = t.amount;
+  document.getElementById('txn-date').value = t.date;
+  document.getElementById('txn-desc').value = t.desc || '';
+  document.querySelector('#modal-finance h2').textContent = 'Edit Transaction';
+  document.querySelector('#modal-finance .btn-primary').textContent = 'Save Changes';
 }
 
 function deleteTransaction(id) {
@@ -1274,20 +1406,45 @@ function deleteTransaction(id) {
 // ============ HARVEST ============
 function addHarvest(e) {
   e.preventDefault();
-  const harvest = {
-    id: genId(),
-    pondId: document.getElementById('harv-pond').value,
-    qty: parseInt(document.getElementById('harv-qty').value),
-    weight: parseFloat(document.getElementById('harv-weight').value) || 0,
-    date: document.getElementById('harv-date').value,
-    notes: document.getElementById('harv-notes').value.trim()
-  };
-  data.harvests.push(harvest);
+  if (editMode.type === 'harvest') {
+    const h = data.harvests.find(h => h.id === editMode.id);
+    if (h) {
+      h.pondId = document.getElementById('harv-pond').value;
+      h.qty = parseInt(document.getElementById('harv-qty').value);
+      h.weight = parseFloat(document.getElementById('harv-weight').value) || 0;
+      h.date = document.getElementById('harv-date').value;
+      h.notes = document.getElementById('harv-notes').value.trim();
+    }
+    clearEditMode();
+    showToast('Harvest updated!');
+  } else {
+    data.harvests.push({
+      id: genId(),
+      pondId: document.getElementById('harv-pond').value,
+      qty: parseInt(document.getElementById('harv-qty').value),
+      weight: parseFloat(document.getElementById('harv-weight').value) || 0,
+      date: document.getElementById('harv-date').value,
+      notes: document.getElementById('harv-notes').value.trim()
+    });
+    showToast('Harvest recorded!');
+  }
   saveData(data);
   closeModal('modal-harvest');
   e.target.reset();
-  showToast('Harvest recorded!');
   refreshPage();
+}
+
+function editHarvest(id) {
+  const h = data.harvests.find(h => h.id === id);
+  if (!h) return;
+  editMode = { type: 'harvest', id: id };
+  openModal('modal-harvest');
+  document.getElementById('harv-pond').value = h.pondId;
+  document.getElementById('harv-qty').value = h.qty;
+  document.getElementById('harv-weight').value = h.weight || '';
+  document.getElementById('harv-date').value = h.date;
+  document.getElementById('harv-notes').value = h.notes || '';
+  document.querySelector('#modal-harvest h2').textContent = 'Edit Harvest';
 }
 
 function deleteHarvest(id) {
@@ -1301,34 +1458,63 @@ function deleteHarvest(id) {
 function addSale(e) {
   e.preventDefault();
   const total = parseFloat(document.getElementById('sale-total').value);
-  const sale = {
-    id: genId(),
-    pondId: document.getElementById('sale-pond').value,
-    qty: parseInt(document.getElementById('sale-qty').value),
-    weight: parseFloat(document.getElementById('sale-weight').value) || 0,
-    pricePerKg: parseFloat(document.getElementById('sale-price').value) || 0,
-    total: total,
-    buyer: document.getElementById('sale-buyer').value.trim(),
-    date: document.getElementById('sale-date').value
-  };
-  data.sales.push(sale);
+  if (editMode.type === 'sale') {
+    const s = data.sales.find(s => s.id === editMode.id);
+    if (s) {
+      s.pondId = document.getElementById('sale-pond').value;
+      s.qty = parseInt(document.getElementById('sale-qty').value);
+      s.weight = parseFloat(document.getElementById('sale-weight').value) || 0;
+      s.pricePerKg = parseFloat(document.getElementById('sale-price').value) || 0;
+      s.total = total;
+      s.buyer = document.getElementById('sale-buyer').value.trim();
+      s.date = document.getElementById('sale-date').value;
+    }
+    clearEditMode();
+    showToast('Sale updated!');
+  } else {
+    const sale = {
+      id: genId(),
+      pondId: document.getElementById('sale-pond').value,
+      qty: parseInt(document.getElementById('sale-qty').value),
+      weight: parseFloat(document.getElementById('sale-weight').value) || 0,
+      pricePerKg: parseFloat(document.getElementById('sale-price').value) || 0,
+      total: total,
+      buyer: document.getElementById('sale-buyer').value.trim(),
+      date: document.getElementById('sale-date').value
+    };
+    data.sales.push(sale);
 
-  // Auto-add income
-  data.transactions.push({
-    id: genId(),
-    type: 'income',
-    category: 'fish_sales',
-    pondId: sale.pondId,
-    amount: total,
-    date: sale.date,
-    desc: `Sale to ${sale.buyer || 'customer'}: ${sale.qty} fish, ${sale.weight}kg`
-  });
-
+    // Auto-add income
+    data.transactions.push({
+      id: genId(),
+      type: 'income',
+      category: 'fish_sales',
+      pondId: sale.pondId,
+      amount: total,
+      date: sale.date,
+      desc: `Sale to ${sale.buyer || 'customer'}: ${sale.qty} fish, ${sale.weight}kg`
+    });
+    showToast('Sale recorded!');
+  }
   saveData(data);
   closeModal('modal-sale');
   e.target.reset();
-  showToast('Sale recorded!');
   refreshPage();
+}
+
+function editSale(id) {
+  const s = data.sales.find(s => s.id === id);
+  if (!s) return;
+  editMode = { type: 'sale', id: id };
+  openModal('modal-sale');
+  document.getElementById('sale-pond').value = s.pondId;
+  document.getElementById('sale-qty').value = s.qty;
+  document.getElementById('sale-weight').value = s.weight || '';
+  document.getElementById('sale-price').value = s.pricePerKg || '';
+  document.getElementById('sale-total').value = s.total;
+  document.getElementById('sale-buyer').value = s.buyer || '';
+  document.getElementById('sale-date').value = s.date;
+  document.querySelector('#modal-sale h2').textContent = 'Edit Sale';
 }
 
 function deleteSale(id) {
@@ -1428,6 +1614,7 @@ function renderPonds() {
               ${p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : ''} ${p.size ? '&middot; ' + p.size : ''} ${p.species ? '&middot; ' + p.species : ''}
             </div>
           </div>
+          <button class="btn-edit" onclick="editPond('${p.id}')" title="Edit">&#9998;</button>
           <button class="btn-delete" onclick="deletePond('${p.id}')" title="Delete">&times;</button>
         </div>
         <div class="pond-stats">
@@ -1460,6 +1647,7 @@ function renderPonds() {
         </div>
         <div class="record-actions">
           <span class="record-amount expense">-${m.qty}</span>
+          <button class="btn-edit" onclick="editMortality('${m.id}')" title="Edit">&#9998;</button>
           <button class="btn-delete" onclick="deleteMortality('${m.id}')">&times;</button>
         </div>
       </li>`).join('');
@@ -1506,6 +1694,7 @@ function renderFinance() {
         </div>
         <div class="record-actions">
           <span class="record-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</span>
+          <button class="btn-edit" onclick="editTransaction('${t.id}')" title="Edit">&#9998;</button>
           <button class="btn-delete" onclick="deleteTransaction('${t.id}')">&times;</button>
         </div>
       </li>`).join('');
@@ -1547,6 +1736,7 @@ function renderHarvestPage() {
         </div>
         <div class="record-actions">
           <span class="record-amount" style="color:var(--primary);">${h.weight ? h.weight + 'kg' : h.qty + ' fish'}</span>
+          <button class="btn-edit" onclick="editHarvest('${h.id}')" title="Edit">&#9998;</button>
           <button class="btn-delete" onclick="deleteHarvest('${h.id}')">&times;</button>
         </div>
       </li>`).join('');
@@ -1566,6 +1756,7 @@ function renderHarvestPage() {
         </div>
         <div class="record-actions">
           <span class="record-amount income">+${fmt(s.total)}</span>
+          <button class="btn-edit" onclick="editSale('${s.id}')" title="Edit">&#9998;</button>
           <button class="btn-delete" onclick="deleteSale('${s.id}')">&times;</button>
         </div>
       </li>`).join('');
