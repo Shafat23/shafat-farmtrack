@@ -443,6 +443,81 @@ body {
 .sync-dot.error { background: #f87171; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+/* Login screen */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-screen.hidden { display: none; }
+.login-box {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.login-box h1 { font-size: 24px; color: var(--primary-dark); margin-bottom: 4px; }
+.login-box .subtitle { font-size: 13px; color: var(--text-light); margin-bottom: 24px; }
+.login-box input {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 24px;
+  text-align: center;
+  letter-spacing: 8px;
+  margin-bottom: 16px;
+  -webkit-appearance: none;
+}
+.login-box input:focus { outline: none; border-color: var(--primary); }
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 12px;
+  min-height: 20px;
+}
+.login-box .btn { margin-bottom: 12px; }
+.login-box .setup-link {
+  font-size: 12px;
+  color: var(--text-light);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.user-badge {
+  font-size: 11px;
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.active { display: flex; }
+.loading-spinner {
+  background: white;
+  border-radius: 14px;
+  padding: 20px 30px;
+  font-size: 14px;
+  color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
 /* Setup card */
 .setup-card {
   background: linear-gradient(135deg, #fef3c7, #fef9c3);
@@ -464,12 +539,38 @@ body {
 </head>
 <body>
 
+<!-- Login Screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <h1>ShaFat FarmTrack</h1>
+    <div class="subtitle">Enter your PIN to continue</div>
+    <input type="number" id="login-pin" placeholder="----" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    <div class="setup-link" onclick="document.getElementById('login-setup').style.display='block'">First time? Setup instructions</div>
+    <div id="login-setup" style="display:none;text-align:left;margin-top:16px;font-size:12px;color:var(--text-light);line-height:1.6;">
+      <strong>Quick setup:</strong><br>
+      1. Ask your admin for your PIN and the App URL<br>
+      2. Enter your PIN above and tap Login<br><br>
+      <strong>Admin setup:</strong><br>
+      1. Tap the sync icon after login to connect Google Sheets<br>
+      2. Create a "Users" sheet with columns: pin, name, role<br>
+      3. Add a row for each user (e.g. 1234, Fatah, admin)
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner" id="loading-text">Syncing...</div>
+</div>
+
 <!-- Header -->
 <div class="header">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <div>
       <h1>ShaFat FarmTrack</h1>
-      <small>ShaFat Farms - Fish Farm Manager</small>
+      <small><span class="user-badge" id="user-badge"></span>ShaFat Farms</small>
     </div>
     <div class="sync-status" onclick="openModal('modal-settings')" id="sync-indicator">
       <span class="sync-dot" id="sync-dot"></span>
@@ -627,6 +728,7 @@ body {
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
     </div>
     <button class="btn-outline" style="width:100%;margin-top:10px;color:var(--danger);border-color:var(--danger);" onclick="clearAllData()">Clear All Data</button>
+    <button class="btn-outline" style="width:100%;margin-top:10px;" onclick="logout()">Logout</button>
   </div>
 </div>
 
@@ -675,13 +777,13 @@ body {
         <li>Delete any existing code in the editor</li>
         <li>Open the file <code>google-apps-script.js</code> from this folder (it's in your iCloud Drive alongside this app), copy ALL the code, and paste it into the Apps Script editor</li>
         <li>Click the <strong>Save</strong> button</li>
-        <li>Click <strong>Deploy &gt; New deployment</strong></li>
-        <li>Click the gear icon, choose <strong>Web app</strong></li>
-        <li>Set "Execute as" to <strong>Me</strong></li>
-        <li>Set "Who has access" to <strong>Anyone</strong></li>
-        <li>Click <strong>Deploy</strong>, then <strong>Authorize access</strong></li>
+        <li>Click <strong>Deploy &gt; Manage deployments &gt; Edit (pencil icon)</strong></li>
+        <li>Set Version to <strong>New version</strong>, click <strong>Deploy</strong></li>
         <li>Copy the <strong>Web App URL</strong> and paste it below</li>
       </ol>
+      <p style="margin-top:10px;"><strong>Then create a "Users" sheet</strong> in your spreadsheet with columns:<br>
+      <code>pin | name | role</code><br>
+      Add a row for each user, e.g.: <code>1234 | Fatah | admin</code></p>
     </div>
 
     <div class="form-group">
@@ -1166,7 +1268,7 @@ function autoGeneratePondName() {
   document.getElementById('pond-name').value = prefix + '-' + nextNum;
 }
 
-function addPond(e) {
+async function addPond(e) {
   e.preventDefault();
   if (editMode.type === 'pond') {
     const p = data.ponds.find(p => p.id === editMode.id);
@@ -1176,9 +1278,9 @@ function addPond(e) {
       p.size = document.getElementById('pond-size').value.trim();
       p.species = document.getElementById('pond-species').value.trim();
       p.notes = document.getElementById('pond-notes').value.trim();
+      await apiUpdate('ponds', p);
     }
     clearEditMode();
-    saveData(data);
     closeModal('modal-pond');
     e.target.reset();
     showToast('Pond updated!');
@@ -1192,8 +1294,7 @@ function addPond(e) {
       notes: document.getElementById('pond-notes').value.trim(),
       createdAt: today()
     };
-    data.ponds.push(pond);
-    saveData(data);
+    await apiAdd('ponds', pond);
     closeModal('modal-pond');
     e.target.reset();
     showToast('Pond added!');
@@ -1216,14 +1317,18 @@ function editPond(id) {
   document.querySelector('#modal-pond .btn-primary').textContent = 'Save Changes';
 }
 
-function deletePond(id) {
+async function deletePond(id) {
   if (!confirm('Delete this pond and all its records?')) return;
-  data.ponds = data.ponds.filter(p => p.id !== id);
-  data.stockings = data.stockings.filter(s => s.pondId !== id);
-  data.mortalities = data.mortalities.filter(m => m.pondId !== id);
-  data.harvests = data.harvests.filter(h => h.pondId !== id);
-  data.sales = data.sales.filter(s => s.pondId !== id);
-  saveData(data);
+  // Delete related records from cloud
+  const relatedStockings = data.stockings.filter(s => s.pondId === id);
+  const relatedMortalities = data.mortalities.filter(m => m.pondId === id);
+  const relatedHarvests = data.harvests.filter(h => h.pondId === id);
+  const relatedSales = data.sales.filter(s => s.pondId === id);
+  for (const r of relatedStockings) await apiDelete('stockings', r.id);
+  for (const r of relatedMortalities) await apiDelete('mortalities', r.id);
+  for (const r of relatedHarvests) await apiDelete('harvests', r.id);
+  for (const r of relatedSales) await apiDelete('sales', r.id);
+  await apiDelete('ponds', id);
   showToast('Pond deleted');
   refreshPage();
 }
@@ -1242,7 +1347,7 @@ function getPondStats(pondId) {
 }
 
 // ============ STOCKING ============
-function addStock(e) {
+async function addStock(e) {
   e.preventDefault();
   const qty = parseInt(document.getElementById('stock-qty').value);
   const costPer = parseFloat(document.getElementById('stock-cost').value) || 0;
@@ -1255,11 +1360,11 @@ function addStock(e) {
     supplier: document.getElementById('stock-supplier').value.trim(),
     notes: document.getElementById('stock-notes').value.trim()
   };
-  data.stockings.push(stocking);
+  await apiAdd('stockings', stocking);
 
   // Auto-add expense if cost > 0
   if (costPer > 0) {
-    data.transactions.push({
+    await apiAdd('transactions', {
       id: genId(),
       type: 'expense',
       category: 'fingerlings',
@@ -1270,7 +1375,6 @@ function addStock(e) {
     });
   }
 
-  saveData(data);
   closeModal('modal-stock');
   e.target.reset();
   showToast(`${qty} fish stocked!`);
@@ -1278,7 +1382,7 @@ function addStock(e) {
 }
 
 // ============ MORTALITY ============
-function addMortality(e) {
+async function addMortality(e) {
   e.preventDefault();
   if (editMode.type === 'mortality') {
     const m = data.mortalities.find(m => m.id === editMode.id);
@@ -1288,11 +1392,12 @@ function addMortality(e) {
       m.date = document.getElementById('mort-date').value;
       m.cause = document.getElementById('mort-cause').value;
       m.notes = document.getElementById('mort-notes').value.trim();
+      await apiUpdate('mortalities', m);
     }
     clearEditMode();
     showToast('Mortality updated!');
   } else {
-    data.mortalities.push({
+    await apiAdd('mortalities', {
       id: genId(),
       pondId: document.getElementById('mort-pond').value,
       qty: parseInt(document.getElementById('mort-qty').value),
@@ -1302,7 +1407,6 @@ function addMortality(e) {
     });
     showToast('Mortality recorded');
   }
-  saveData(data);
   closeModal('modal-mortality');
   e.target.reset();
   refreshPage();
@@ -1322,9 +1426,8 @@ function editMortality(id) {
   document.querySelector('#modal-mortality .btn-danger').textContent = 'Save Changes';
 }
 
-function deleteMortality(id) {
-  data.mortalities = data.mortalities.filter(m => m.id !== id);
-  saveData(data);
+async function deleteMortality(id) {
+  await apiDelete('mortalities', id);
   showToast('Record deleted');
   refreshPage();
 }
@@ -1348,7 +1451,7 @@ function formatCategory(c) {
   return c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function addTransaction(e) {
+async function addTransaction(e) {
   e.preventDefault();
   if (editMode.type === 'transaction') {
     const t = data.transactions.find(t => t.id === editMode.id);
@@ -1359,11 +1462,12 @@ function addTransaction(e) {
       t.amount = parseFloat(document.getElementById('txn-amount').value);
       t.date = document.getElementById('txn-date').value;
       t.desc = document.getElementById('txn-desc').value.trim();
+      await apiUpdate('transactions', t);
     }
     clearEditMode();
     showToast('Transaction updated!');
   } else {
-    data.transactions.push({
+    await apiAdd('transactions', {
       id: genId(),
       type: document.getElementById('txn-type').value,
       category: document.getElementById('txn-category').value,
@@ -1374,7 +1478,6 @@ function addTransaction(e) {
     });
     showToast('Transaction saved!');
   }
-  saveData(data);
   closeModal('modal-finance');
   e.target.reset();
   setTxnType('income');
@@ -1396,15 +1499,14 @@ function editTransaction(id) {
   document.querySelector('#modal-finance .btn-primary').textContent = 'Save Changes';
 }
 
-function deleteTransaction(id) {
-  data.transactions = data.transactions.filter(t => t.id !== id);
-  saveData(data);
+async function deleteTransaction(id) {
+  await apiDelete('transactions', id);
   showToast('Transaction deleted');
   refreshPage();
 }
 
 // ============ HARVEST ============
-function addHarvest(e) {
+async function addHarvest(e) {
   e.preventDefault();
   if (editMode.type === 'harvest') {
     const h = data.harvests.find(h => h.id === editMode.id);
@@ -1414,11 +1516,12 @@ function addHarvest(e) {
       h.weight = parseFloat(document.getElementById('harv-weight').value) || 0;
       h.date = document.getElementById('harv-date').value;
       h.notes = document.getElementById('harv-notes').value.trim();
+      await apiUpdate('harvests', h);
     }
     clearEditMode();
     showToast('Harvest updated!');
   } else {
-    data.harvests.push({
+    await apiAdd('harvests', {
       id: genId(),
       pondId: document.getElementById('harv-pond').value,
       qty: parseInt(document.getElementById('harv-qty').value),
@@ -1428,7 +1531,6 @@ function addHarvest(e) {
     });
     showToast('Harvest recorded!');
   }
-  saveData(data);
   closeModal('modal-harvest');
   e.target.reset();
   refreshPage();
@@ -1447,15 +1549,14 @@ function editHarvest(id) {
   document.querySelector('#modal-harvest h2').textContent = 'Edit Harvest';
 }
 
-function deleteHarvest(id) {
-  data.harvests = data.harvests.filter(h => h.id !== id);
-  saveData(data);
+async function deleteHarvest(id) {
+  await apiDelete('harvests', id);
   showToast('Record deleted');
   refreshPage();
 }
 
 // ============ SALES ============
-function addSale(e) {
+async function addSale(e) {
   e.preventDefault();
   const total = parseFloat(document.getElementById('sale-total').value);
   if (editMode.type === 'sale') {
@@ -1468,6 +1569,7 @@ function addSale(e) {
       s.total = total;
       s.buyer = document.getElementById('sale-buyer').value.trim();
       s.date = document.getElementById('sale-date').value;
+      await apiUpdate('sales', s);
     }
     clearEditMode();
     showToast('Sale updated!');
@@ -1482,10 +1584,10 @@ function addSale(e) {
       buyer: document.getElementById('sale-buyer').value.trim(),
       date: document.getElementById('sale-date').value
     };
-    data.sales.push(sale);
+    await apiAdd('sales', sale);
 
     // Auto-add income
-    data.transactions.push({
+    await apiAdd('transactions', {
       id: genId(),
       type: 'income',
       category: 'fish_sales',
@@ -1496,7 +1598,6 @@ function addSale(e) {
     });
     showToast('Sale recorded!');
   }
-  saveData(data);
   closeModal('modal-sale');
   e.target.reset();
   refreshPage();
@@ -1517,9 +1618,8 @@ function editSale(id) {
   document.querySelector('#modal-sale h2').textContent = 'Edit Sale';
 }
 
-function deleteSale(id) {
-  data.sales = data.sales.filter(s => s.id !== id);
-  saveData(data);
+async function deleteSale(id) {
+  await apiDelete('sales', id);
   showToast('Record deleted');
   refreshPage();
 }
@@ -1643,7 +1743,7 @@ function renderPonds() {
       <li class="record-item">
         <div class="record-info">
           <h4>${m.qty} fish - ${getPondName(m.pondId)}</h4>
-          <p>${fmtDate(m.date)} &middot; ${formatCategory(m.cause)}${m.notes ? ' &middot; ' + m.notes : ''}</p>
+          <p>${fmtDate(m.date)} &middot; ${formatCategory(m.cause)}${m.createdBy ? ' &middot; by ' + m.createdBy : ''}${m.notes ? ' &middot; ' + m.notes : ''}</p>
         </div>
         <div class="record-actions">
           <span class="record-amount expense">-${m.qty}</span>
@@ -1690,7 +1790,7 @@ function renderFinance() {
       <li class="record-item">
         <div class="record-info">
           <h4>${t.desc || formatCategory(t.category)}</h4>
-          <p>${fmtDate(t.date)}${t.pondId ? ' &middot; ' + getPondName(t.pondId) : ''} &middot; ${formatCategory(t.category)}</p>
+          <p>${fmtDate(t.date)}${t.pondId ? ' &middot; ' + getPondName(t.pondId) : ''} &middot; ${formatCategory(t.category)}${t.createdBy ? ' &middot; by ' + t.createdBy : ''}</p>
         </div>
         <div class="record-actions">
           <span class="record-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</span>
@@ -1732,7 +1832,7 @@ function renderHarvestPage() {
       <li class="record-item">
         <div class="record-info">
           <h4>${h.qty} fish from ${getPondName(h.pondId)}</h4>
-          <p>${fmtDate(h.date)}${h.weight ? ' &middot; ' + h.weight + 'kg' : ''}${h.notes ? ' &middot; ' + h.notes : ''}</p>
+          <p>${fmtDate(h.date)}${h.weight ? ' &middot; ' + h.weight + 'kg' : ''}${h.createdBy ? ' &middot; by ' + h.createdBy : ''}${h.notes ? ' &middot; ' + h.notes : ''}</p>
         </div>
         <div class="record-actions">
           <span class="record-amount" style="color:var(--primary);">${h.weight ? h.weight + 'kg' : h.qty + ' fish'}</span>
@@ -1752,7 +1852,7 @@ function renderHarvestPage() {
       <li class="record-item">
         <div class="record-info">
           <h4>${s.qty} fish ${s.buyer ? 'to ' + s.buyer : ''}</h4>
-          <p>${fmtDate(s.date)} &middot; ${getPondName(s.pondId)}${s.weight ? ' &middot; ' + s.weight + 'kg' : ''}</p>
+          <p>${fmtDate(s.date)} &middot; ${getPondName(s.pondId)}${s.weight ? ' &middot; ' + s.weight + 'kg' : ''}${s.createdBy ? ' &middot; by ' + s.createdBy : ''}</p>
         </div>
         <div class="record-actions">
           <span class="record-amount income">+${fmt(s.total)}</span>
@@ -1896,8 +1996,9 @@ function clearAllData() {
   refreshPage();
 }
 
-// ============ CLOUD SYNC ============
+// ============ CLOUD API LAYER ============
 const CLOUD_URL_KEY = 'shafat_cloud_url';
+let currentUser = null;
 
 function getCloudUrl() {
   return localStorage.getItem(CLOUD_URL_KEY) || '';
@@ -1906,9 +2007,180 @@ function getCloudUrl() {
 function updateSyncIndicator(state, label) {
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-label');
-  dot.className = 'sync-dot ' + state;
-  lbl.textContent = label;
+  if (dot) dot.className = 'sync-dot ' + state;
+  if (lbl) lbl.textContent = label;
 }
+
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg || 'Syncing...';
+  document.getElementById('loading-overlay').classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('active');
+}
+
+async function api(action, params) {
+  const url = getCloudUrl();
+  if (!url) throw new Error('Not connected to cloud');
+
+  const query = new URLSearchParams({ action, ...params });
+  updateSyncIndicator('syncing', 'Syncing...');
+
+  const resp = await fetch(url + '?' + query.toString(), { redirect: 'follow' });
+  const result = await resp.json();
+
+  if (!result.success) {
+    updateSyncIndicator('error', 'Error');
+    throw new Error(result.error || 'API error');
+  }
+
+  updateSyncIndicator('connected', 'Synced');
+  return result;
+}
+
+// Sheet name mapping
+const SHEET_MAP = {
+  ponds: 'Ponds', stockings: 'Stockings', mortalities: 'Mortalities',
+  transactions: 'Transactions', harvests: 'Harvests', sales: 'Sales'
+};
+
+async function apiAdd(collection, record) {
+  record.createdBy = currentUser ? currentUser.name : '';
+  // Save to cloud
+  try {
+    await api('add', { sheet: SHEET_MAP[collection], data: JSON.stringify(record) });
+  } catch(e) {
+    showToast('Cloud save failed: ' + e.message);
+  }
+  // Update local
+  data[collection].push(record);
+  saveData(data);
+}
+
+async function apiUpdate(collection, record) {
+  try {
+    await api('update', { sheet: SHEET_MAP[collection], id: record.id, data: JSON.stringify(record) });
+  } catch(e) {
+    showToast('Cloud update failed: ' + e.message);
+  }
+  const idx = data[collection].findIndex(r => r.id === record.id);
+  if (idx !== -1) data[collection][idx] = record;
+  saveData(data);
+}
+
+async function apiDelete(collection, id) {
+  try {
+    await api('delete', { sheet: SHEET_MAP[collection], id: id });
+  } catch(e) {
+    showToast('Cloud delete failed: ' + e.message);
+  }
+  data[collection] = data[collection].filter(r => r.id !== id);
+  saveData(data);
+}
+
+async function loadAllFromCloud() {
+  const url = getCloudUrl();
+  if (!url) return false;
+
+  try {
+    showLoading('Loading data from cloud...');
+    const result = await api('loadAll', {});
+    if (result.data) {
+      data = { ...getDefaultData(), ...result.data };
+      saveData(data);
+
+      // Auto-migrate old format if needed
+      if (result.needsMigration) {
+        showLoading('Migrating old data...');
+        await api('migrate', {});
+        // Reload after migration
+        const reloaded = await api('loadAll', {});
+        if (reloaded.data) {
+          data = { ...getDefaultData(), ...reloaded.data };
+          saveData(data);
+        }
+        showToast('Data migrated to new format!');
+      }
+    }
+    hideLoading();
+    refreshPage();
+    return true;
+  } catch(e) {
+    hideLoading();
+    updateSyncIndicator('error', 'Error');
+    console.error('Load error:', e);
+    return false;
+  }
+}
+
+// ============ LOGIN ============
+
+function doLogin() {
+  const pin = document.getElementById('login-pin').value.trim();
+  const errorEl = document.getElementById('login-error');
+
+  if (!pin) {
+    errorEl.textContent = 'Please enter your PIN';
+    return;
+  }
+
+  const url = getCloudUrl();
+  if (!url) {
+    // No cloud URL — allow offline login with stored session
+    const stored = localStorage.getItem('shafat_user');
+    if (stored) {
+      currentUser = JSON.parse(stored);
+      completeLogin();
+      return;
+    }
+    // First-time setup: allow any PIN, treat as admin
+    currentUser = { name: 'Admin', pin: pin, role: 'admin' };
+    localStorage.setItem('shafat_user', JSON.stringify(currentUser));
+    completeLogin();
+    return;
+  }
+
+  errorEl.textContent = 'Verifying...';
+  api('auth', { pin: pin })
+    .then(function(result) {
+      currentUser = { name: result.name, pin: pin, role: result.role };
+      localStorage.setItem('shafat_user', JSON.stringify(currentUser));
+      errorEl.textContent = '';
+      completeLogin();
+    })
+    .catch(function(err) {
+      errorEl.textContent = err.message || 'Invalid PIN';
+    });
+}
+
+async function completeLogin() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('user-badge').textContent = currentUser.name;
+
+  // Load data from cloud
+  const loaded = await loadAllFromCloud();
+  if (!loaded) {
+    // Fallback to local data
+    data = loadData();
+  }
+  renderDashboard();
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('shafat_user');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+// Handle Enter key on PIN input
+document.getElementById('login-pin').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ============ CLOUD SETTINGS ============
 
 function saveCloudSettings() {
   const url = document.getElementById('settings-script-url').value.trim();
@@ -1917,9 +2189,9 @@ function saveCloudSettings() {
     return;
   }
   localStorage.setItem(CLOUD_URL_KEY, url);
-  showToast('Connected! Syncing...');
+  showToast('Connected! Loading data...');
   closeModal('modal-settings');
-  cloudSync('save');
+  loadAllFromCloud();
 }
 
 function disconnectCloud() {
@@ -1928,162 +2200,6 @@ function disconnectCloud() {
   document.getElementById('sync-status-detail').style.display = 'none';
   document.getElementById('settings-script-url').value = '';
   showToast('Cloud sync disconnected');
-}
-
-function cloudSync(action) {
-  const url = getCloudUrl();
-  if (!url) {
-    updateSyncIndicator('', 'Offline');
-    return;
-  }
-
-  updateSyncIndicator('syncing', 'Syncing...');
-
-  if (action === 'save') {
-    const jsonData = JSON.stringify(data);
-    const callbackName = 'fishtrack_cb_' + Date.now();
-
-    window[callbackName] = function(response) {
-      delete window[callbackName];
-      const scriptEl = document.getElementById('sync-script');
-      if (scriptEl) scriptEl.remove();
-
-      if (response && response.success) {
-        updateSyncIndicator('connected', 'Synced');
-        const statusText = document.getElementById('sync-status-text');
-        statusText.textContent = 'Last synced: ' + new Date().toLocaleString();
-        showToast('Saved to cloud!');
-      } else {
-        updateSyncIndicator('error', 'Sync failed');
-        showToast('Cloud save failed: ' + (response ? response.error : 'Unknown error'));
-      }
-    };
-
-    // Use JSONP approach via script tag (works cross-origin without CORS issues)
-    const script = document.createElement('script');
-    script.id = 'sync-script';
-    // POST via form to handle large data, then poll with GET
-    // Actually, for simplicity use a form POST in a hidden iframe
-    cloudPost(url, jsonData);
-  } else if (action === 'load') {
-    cloudLoad(url);
-  }
-}
-
-function cloudPost(url, jsonData) {
-  // Use fetch with no-cors mode won't work for reading response
-  // Instead, use a hidden form POST to an iframe, then load via GET
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = url + '?action=save';
-  form.target = 'sync-frame';
-  form.style.display = 'none';
-
-  const input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'data';
-  input.value = jsonData;
-  form.appendChild(input);
-
-  let iframe = document.getElementById('sync-frame');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.name = 'sync-frame';
-    iframe.id = 'sync-frame';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
-
-  document.body.appendChild(form);
-
-  iframe.onload = function() {
-    updateSyncIndicator('connected', 'Synced');
-    const statusText = document.getElementById('sync-status-text');
-    statusText.textContent = 'Last synced: ' + new Date().toLocaleString();
-    showToast('Saved to cloud!');
-    form.remove();
-  };
-
-  // Timeout fallback
-  setTimeout(function() {
-    if (document.body.contains(form)) {
-      updateSyncIndicator('connected', 'Synced');
-      showToast('Saved to cloud!');
-      form.remove();
-    }
-  }, 8000);
-
-  form.submit();
-}
-
-function cloudLoad(url) {
-  updateSyncIndicator('syncing', 'Loading...');
-
-  // Use script tag JSONP-style won't work with Apps Script
-  // Use a dynamic script to fetch via redirect
-  fetch(url + '?action=load', { redirect: 'follow' })
-    .then(function(r) { return r.json(); })
-    .then(function(response) {
-      if (response.success && response.data) {
-        // Only overwrite if cloud has actual records
-        const cloud = { ...getDefaultData(), ...response.data };
-        const cloudHasData = cloud.ponds.length > 0 || cloud.transactions.length > 0 || cloud.stockings.length > 0;
-        const localHasData = data.ponds.length > 0 || data.transactions.length > 0 || data.stockings.length > 0;
-
-        if (cloudHasData) {
-          data = cloud;
-          saveData(data);
-          updateSyncIndicator('connected', 'Synced');
-          showToast('Data loaded from cloud!');
-          refreshPage();
-        } else if (localHasData) {
-          // Cloud is empty but we have local data — push it up
-          updateSyncIndicator('connected', 'Synced');
-          cloudSync('save');
-        } else {
-          updateSyncIndicator('connected', 'No data');
-        }
-      } else if (response.success && !response.data) {
-        // No cloud data at all — if we have local data, push it up
-        if (data.ponds.length > 0 || data.transactions.length > 0) {
-          cloudSync('save');
-        }
-        updateSyncIndicator('connected', 'No cloud data');
-      } else {
-        updateSyncIndicator('error', 'Load failed');
-        showToast('Failed to load: ' + (response.error || 'Unknown error'));
-      }
-    })
-    .catch(function(err) {
-      updateSyncIndicator('error', 'Error');
-      showToast('Could not connect to cloud');
-      console.error('Cloud load error:', err);
-    });
-}
-
-// Auto-sync after every data change
-const _origSaveData = saveData;
-saveData = function(d) {
-  _origSaveData(d);
-  // Debounce cloud sync
-  clearTimeout(window._syncTimer);
-  window._syncTimer = setTimeout(function() {
-    if (getCloudUrl()) {
-      cloudSync('save');
-    }
-  }, 2000);
-};
-
-// Init cloud UI
-function initCloudUI() {
-  const url = getCloudUrl();
-  if (url) {
-    document.getElementById('settings-script-url').value = url;
-    document.getElementById('sync-status-detail').style.display = 'block';
-    updateSyncIndicator('connected', 'Connected');
-    // Try loading from cloud on first visit
-    cloudLoad(url);
-  }
 }
 
 // When opening settings modal, populate
@@ -2097,37 +2213,26 @@ openModal = function(id) {
   }
 };
 
-// ============ SEED DATA (one-time) ============
-function seedInitialData() {
-  if (localStorage.getItem('shafat_seeded')) return;
-
-  const pond1Id = genId();
-  const pond2Id = genId();
-
-  data.ponds = [
-    { id: pond1Id, name: 'CAT-001', type: 'tarpaulin', size: '12x10x4', species: 'Catfish', notes: '700 capacity package from Lartman Farms', createdAt: '2026-03-18' },
-    { id: pond2Id, name: 'CAT-002', type: 'tarpaulin', size: '18x10x4', species: 'Catfish', notes: '1,000 capacity package from Lartman Farms', createdAt: '2026-03-18' }
-  ];
-
-  data.stockings = [
-    { id: genId(), pondId: pond1Id, qty: 740, date: '2026-03-18', costPer: 14, supplier: 'Lartman Farms', notes: '700 ordered + 40 extra for mortality allowance' },
-    { id: genId(), pondId: pond2Id, qty: 1050, date: '2026-03-18', costPer: 11.43, supplier: 'Lartman Farms', notes: '1000 ordered + 50 extra for mortality allowance' }
-  ];
-
-  data.transactions = [
-    { id: genId(), type: 'expense', category: 'fingerlings', pondId: pond1Id, amount: 9800, date: '2026-03-18', desc: '700 Capacity Package - Lartman Farms (Invoice #00273)' },
-    { id: genId(), type: 'expense', category: 'fingerlings', pondId: pond2Id, amount: 12000, date: '2026-03-18', desc: '1,000 Capacity Package - Lartman Farms (Invoice #00273)' },
-    { id: genId(), type: 'expense', category: 'transport', pondId: '', amount: 900, date: '2026-03-18', desc: 'Transportation x2 - Lartman Farms (Invoice #00273)' }
-  ];
-
-  saveData(data);
-  localStorage.setItem('shafat_seeded', '1');
-}
-
 // ============ INIT ============
-seedInitialData();
-renderDashboard();
-initCloudUI();
+(function init() {
+  // Check for existing session
+  const storedUser = localStorage.getItem('shafat_user');
+  const url = getCloudUrl();
+
+  if (url) {
+    updateSyncIndicator('connected', 'Connected');
+    document.getElementById('settings-script-url').value = url;
+  }
+
+  if (storedUser) {
+    currentUser = JSON.parse(storedUser);
+    completeLogin();
+  } else {
+    // Show login screen, load local data as fallback
+    data = loadData();
+    renderDashboard();
+  }
+})();
 </script>
 </body>
 </html>
