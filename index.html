@@ -1134,8 +1134,28 @@ function fmtNum(n) {
 
 function fmtDate(d) {
   if (!d) return '';
-  const dt = new Date(d + 'T00:00:00');
+  // Handle both 'YYYY-MM-DD' and ISO datetime 'YYYY-MM-DDTHH:MM:SS.000Z'
+  const dateStr = String(d).split('T')[0];
+  const dt = new Date(dateStr + 'T00:00:00');
+  if (isNaN(dt.getTime())) return '';
   return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Normalize ISO datetime strings to YYYY-MM-DD across all records
+function normalizeDates(d) {
+  const collections = ['ponds','stockings','mortalities','transactions','harvests','sales'];
+  const dateFields = ['date','createdAt'];
+  collections.forEach(col => {
+    if (d[col]) {
+      d[col].forEach(record => {
+        dateFields.forEach(field => {
+          if (record[field] && String(record[field]).includes('T')) {
+            record[field] = String(record[field]).split('T')[0];
+          }
+        });
+      });
+    }
+  });
 }
 
 function showToast(msg) {
@@ -2090,6 +2110,7 @@ async function loadAllFromCloud() {
     const result = await api('loadAll', {});
     if (result.data) {
       data = { ...getDefaultData(), ...result.data };
+      normalizeDates(data);
       saveData(data);
 
       // Auto-migrate old format if needed
@@ -2100,6 +2121,7 @@ async function loadAllFromCloud() {
         const reloaded = await api('loadAll', {});
         if (reloaded.data) {
           data = { ...getDefaultData(), ...reloaded.data };
+          normalizeDates(data);
           saveData(data);
         }
         showToast('Data migrated to new format!');
@@ -2167,126 +2189,56 @@ async function completeLogin() {
     data = loadData();
   }
 
-  // One-time seed of initial farm data
-  await seedInitialData();
+  // One-time dedup cleanup
+  await deduplicateData();
 
   renderDashboard();
 }
 
-// ============ ONE-TIME SEED (initial farm expenses) ============
-async function seedInitialData() {
-  if (localStorage.getItem('shafat_seeded_v1')) return; // Already done
+// ============ DEDUP: Remove duplicate records ============
+async function deduplicateData() {
+  if (localStorage.getItem('shafat_deduped_v1')) return;
 
-  // Find existing ponds by name, or create them
-  let cat001 = data.ponds.find(p => p.name === 'CAT-001');
-  let cat002 = data.ponds.find(p => p.name === 'CAT-002');
+  const collections = ['stockings', 'transactions', 'mortalities', 'harvests', 'sales'];
+  let totalRemoved = 0;
 
-  // Create ponds if they don't exist
-  if (!cat001) {
-    cat001 = {
-      id: genId(), name: 'CAT-001', type: 'tarpaulin', size: '12x10x4',
-      species: 'Catfish', notes: '480 cu.ft capacity', createdAt: '2026-03-19', createdBy: currentUser.name
-    };
-    await apiAdd('ponds', cat001);
-  }
-  if (!cat002) {
-    cat002 = {
-      id: genId(), name: 'CAT-002', type: 'tarpaulin', size: '18x10x4',
-      species: 'Catfish', notes: '720 cu.ft capacity', createdAt: '2026-03-19', createdBy: currentUser.name
-    };
-    await apiAdd('ponds', cat002);
-  }
+  for (const col of collections) {
+    if (!data[col] || data[col].length === 0) continue;
 
-  const cat001Id = cat001.id;
-  const cat002Id = cat002.id;
-  const by = currentUser.name;
+    const seen = new Map();
+    const dupeIds = [];
 
-  // Only seed if no stockings exist yet (avoid duplicates if ponds existed but nothing else)
-  if (data.stockings.length === 0) {
-    // --- Stockings ---
-    await apiAdd('stockings', {
-      id: genId(), pondId: cat001Id, qty: 740, date: '2026-03-19',
-      costPer: 2, supplier: 'Lartman Farms', notes: '700 paid + 40 free for mortality', createdBy: by
-    });
-    await apiAdd('stockings', {
-      id: genId(), pondId: cat002Id, qty: 1050, date: '2026-03-19',
-      costPer: 2, supplier: 'Lartman Farms', notes: '1,000 paid + 50 free for mortality', createdBy: by
-    });
+    for (const record of data[col]) {
+      // Build a fingerprint from key fields (excluding id)
+      let fingerprint;
+      if (col === 'stockings') {
+        fingerprint = `${record.pondId}|${record.qty}|${String(record.date).split('T')[0]}|${record.supplier}`;
+      } else if (col === 'transactions') {
+        fingerprint = `${record.type}|${record.category}|${Number(record.amount)}|${String(record.date).split('T')[0]}|${record.desc}`;
+      } else if (col === 'mortalities') {
+        fingerprint = `${record.pondId}|${record.qty}|${String(record.date).split('T')[0]}|${record.cause}`;
+      } else {
+        fingerprint = `${record.pondId}|${record.qty}|${String(record.date).split('T')[0]}|${Number(record.amount || 0)}`;
+      }
 
-    // --- Fingerling expense transactions (auto-created by stocking) ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'fingerlings', pondId: cat001Id,
-      amount: 1480, date: '2026-03-19', desc: 'Fingerlings for CAT-001 (740 x 2)', createdBy: by
-    });
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'fingerlings', pondId: cat002Id,
-      amount: 2100, date: '2026-03-19', desc: 'Fingerlings for CAT-002 (1,050 x 2)', createdBy: by
-    });
+      if (seen.has(fingerprint)) {
+        dupeIds.push(record.id); // This is the duplicate — mark for removal
+      } else {
+        seen.set(fingerprint, record.id);
+      }
+    }
+
+    // Delete duplicates from cloud and local
+    for (const dupeId of dupeIds) {
+      await apiDelete(col, dupeId);
+      totalRemoved++;
+    }
   }
 
-  // Only seed expenses if fewer than 5 transactions exist (the fingerlings ones above + maybe a few manual)
-  if (data.transactions.length <= 4) {
-    // --- Pond Setup ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'pond_setup', pondId: cat001Id,
-      amount: 7720, date: '2026-03-19', desc: 'Tarpaulin pond 12x10x4 - Lartman Farms', createdBy: by
-    });
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'pond_setup', pondId: cat002Id,
-      amount: 11580, date: '2026-03-19', desc: 'Tarpaulin pond 18x10x4 - Lartman Farms', createdBy: by
-    });
-
-    // --- Equipment: PolyTank ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'equipment', pondId: '',
-      amount: 11660, date: '2026-03-23', desc: '10K liters PolyTank (incl. GH₵20 MoMo fee)', createdBy: by
-    });
-
-    // --- Transport: PolyTank ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'transport', pondId: '',
-      amount: 171.27, date: '2026-03-23', desc: 'PolyTank transportation to farm', createdBy: by
-    });
-
-    // --- Labor: Plumbing work ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'labor', pondId: '',
-      amount: 302.25, date: '2026-03-24', desc: 'Plumbing work - connecting tank to pond', createdBy: by
-    });
-
-    // --- Water ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'water', pondId: '',
-      amount: 604.50, date: '2026-03-24', desc: '2 water trips for tank', createdBy: by
-    });
-
-    // --- Labor: Resource persons ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'labor', pondId: '',
-      amount: 300, date: '2026-03-26', desc: '2 resource persons - pond setup', createdBy: by
-    });
-
-    // --- Equipment: Scale ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'equipment', pondId: '',
-      amount: 280, date: '2026-03-27', desc: 'Waterproof scale', createdBy: by
-    });
-
-    // --- Equipment: Fish net ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'equipment', pondId: '',
-      amount: 30, date: '2026-03-27', desc: '12" fish net', createdBy: by
-    });
-
-    // --- Materials: Plumbing ---
-    await apiAdd('transactions', {
-      id: genId(), type: 'expense', category: 'materials', pondId: '',
-      amount: 1980, date: '2026-06-25', desc: 'Plumbing materials - pipes, angles, adapters', createdBy: by
-    });
+  localStorage.setItem('shafat_deduped_v1', 'true');
+  if (totalRemoved > 0) {
+    showToast(`Cleaned up ${totalRemoved} duplicate records`);
   }
-
-  localStorage.setItem('shafat_seeded_v1', 'true');
-  showToast('Farm data loaded! 🐟');
 }
 
 function logout() {
