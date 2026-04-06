@@ -2000,8 +2000,10 @@ function clearAllData() {
 const CLOUD_URL_KEY = 'shafat_cloud_url';
 let currentUser = null;
 
+const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzNN2a5WicPB5ibaAxWWXd7MZ3zu7keTAhJudSL7ou3uXjdRe7Hq4Y4zgCycqFWGaygkg/exec';
+
 function getCloudUrl() {
-  return localStorage.getItem(CLOUD_URL_KEY) || '';
+  return localStorage.getItem(CLOUD_URL_KEY) || DEFAULT_CLOUD_URL;
 }
 
 function updateSyncIndicator(state, label) {
