@@ -1,0 +1,9 @@
+.DS_Store
+serve.py
+*.py
+google-apps-script.js
+*.pdf
+*.PNG
+*.jpg
+*.jpeg
+.claude/

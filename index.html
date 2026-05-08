@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e7490">
+<title>ShaFat FarmTrack</title>
+<style>
+:root {
+  --primary: #0e7490;
+  --primary-light: #22d3ee;
+  --primary-dark: #064e5e;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --warning-bg: #fef3c7;
+  --warning-border: #fcd34d;
+  --purple: #7c3aed;
+  --blue: #2563eb;
+  --bg: #f0f9ff;
+  --card: #ffffff;
+  --text: #1e293b;
+  --text-light: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+  -webkit-tap-highlight-color: transparent;
+}
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  padding: 16px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(14,116,144,0.3);
+}
+.header h1 { font-size: 20px; font-weight: 700; }
+.header small { opacity: 0.8; font-size: 12px; }
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  display: flex;
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  font-size: 10px;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: color 0.2s;
+  border: none;
+  background: none;
+  gap: 3px;
+}
+.nav-item.active { color: var(--primary); font-weight: 600; }
+.nav-item svg { width: 22px; height: 22px; }
+.page { display: none; padding: 16px; animation: fadeIn 0.2s; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.stat-icon { font-size: 24px; margin-bottom: 4px; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+.stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+.stat-card.income .stat-value { color: var(--success); }
+.stat-card.expense .stat-value { color: var(--danger); }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  background: #f8fafc;
+  color: var(--text);
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+}
+.form-group textarea { min-height: 60px; resize: vertical; }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+.hint { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+.btn-small { width: auto; padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+.btn-outline {
+  flex: 1;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+}
+.record-list { list-style: none; }
+.record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.record-item:last-child { border-bottom: none; }
+.record-info h4 { font-size: 14px; font-weight: 600; }
+.record-info p { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.record-amount { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.record-amount.income { color: var(--success); }
+.record-amount.expense { color: var(--danger); }
+.record-actions { display: flex; gap: 8px; align-items: center; }
+.btn-edit { background: none; border: none; color: var(--primary); cursor: pointer; padding: 4px; font-size: 16px; opacity: 0.6; }
+.btn-edit:hover { opacity: 1; }
+.btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; padding: 4px; font-size: 18px; opacity: 0.6; }
+.btn-delete:hover { opacity: 1; }
+.tab-bar {
+  display: flex;
+  background: #e2e8f0;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 16px;
+}
+.tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-light);
+  border: none;
+  background: none;
+  transition: all 0.2s;
+}
+.tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h2 { font-size: 18px; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light); padding: 4px; }
+.filter-bar { display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.filter-bar select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: white;
+  color: var(--text);
+  min-width: 120px;
+}
+.summary-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.summary-chip { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.summary-chip.income { background: #dcfce7; color: var(--success); }
+.summary-chip.expense { background: #fee2e2; color: var(--danger); }
+.summary-chip.net { background: #e0f2fe; color: var(--primary); }
+.fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(14,116,144,0.4);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.fab:active { transform: scale(0.9); }
+.chart-bar-container { margin-top: 10px; }
+.chart-bar-row { display: flex; align-items: center; margin-bottom: 8px; gap: 8px; }
+.chart-bar-label { font-size: 12px; width: 70px; text-align: right; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chart-bar-track { flex: 1; background: #e2e8f0; border-radius: 6px; height: 20px; overflow: hidden; }
+.chart-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s; min-width: 2px; }
+.chart-bar-fill.income { background: var(--success); }
+.chart-bar-fill.expense { background: var(--danger); }
+.chart-bar-fill.sort { background: var(--purple); }
+.chart-bar-value { font-size: 12px; width: 70px; font-weight: 600; }
+.toast {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: #1e293b;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Pond cards */
+.pond-card {
+  background: linear-gradient(135deg, #ecfeff, #f0f9ff);
+  border: 1.5px solid #a5f3fc;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.pond-card.quarantine {
+  background: linear-gradient(135deg, #fef9c3, #fef3c7);
+  border-color: var(--warning-border);
+}
+.pond-card.inactive {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  opacity: 0.75;
+}
+.pond-card h3 { font-size: 16px; color: var(--primary-dark); margin-bottom: 4px; }
+.pond-card.quarantine h3 { color: #92400e; }
+.pond-card.inactive h3 { color: var(--text-light); }
+.pond-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.pond-stat { font-size: 12px; color: var(--text-light); }
+.pond-stat strong { color: var(--text); }
+.pond-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.status-badge.active { background: #dcfce7; color: var(--success); }
+.status-badge.quarantine { background: var(--warning-bg); color: var(--warning); }
+.status-badge.inactive { background: #f1f5f9; color: var(--text-light); }
+.sort-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.sort-badge.large { background: #e0f2fe; color: var(--primary); }
+.sort-badge.small { background: #fef9c3; color: #92400e; }
+.sort-badge.sickly { background: #fee2e2; color: var(--danger); }
+.sort-badge.other { background: #f3e8ff; color: var(--purple); }
+
+/* Sync */
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  opacity: 0.9;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.15);
+}
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+.sync-dot.connected { background: #4ade80; }
+.sync-dot.syncing { background: #facc15; animation: pulse 1s infinite; }
+.sync-dot.error { background: #f87171; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Login */
+.login-screen {
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-screen.hidden { display: none; }
+.login-box {
+  background: white;
+  border-radius: 20px;
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.login-box h1 { font-size: 24px; color: var(--primary-dark); margin-bottom: 4px; }
+.login-box .subtitle { font-size: 13px; color: var(--text-light); margin-bottom: 24px; }
+.login-box input {
+  width: 100%;
+  padding: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 28px;
+  text-align: center;
+  letter-spacing: 8px;
+  margin-bottom: 16px;
+  -webkit-appearance: none;
+}
+.login-box input:focus { outline: none; border-color: var(--primary); }
+.login-error { color: var(--danger); font-size: 13px; margin-bottom: 12px; min-height: 20px; }
+.login-box .btn { margin-bottom: 12px; }
+.login-box .setup-link { font-size: 12px; color: var(--text-light); cursor: pointer; text-decoration: underline; }
+.user-badge { font-size: 11px; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; margin-right: 8px; }
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.active { display: flex; }
+.loading-spinner {
+  background: white;
+  border-radius: 14px;
+  padding: 20px 30px;
+  font-size: 14px;
+  color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.setup-card {
+  background: linear-gradient(135deg, #fef3c7, #fef9c3);
+  border: 1.5px solid #fcd34d;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.setup-card h3 { color: #92400e; font-size: 15px; margin-bottom: 8px; }
+.setup-card p, .setup-card ol { font-size: 13px; color: #78350f; line-height: 1.8; }
+.setup-card ol { padding-left: 20px; }
+.setup-card code { background: rgba(0,0,0,0.08); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.role-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.role-chip.admin { background: #fef3c7; color: #92400e; }
+.role-chip.helper { background: #dcfce7; color: #166534; }
+.section-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; margin-top: 4px; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div style="font-size:40px;margin-bottom:8px;">🐟</div>
+    <h1>ShaFat FarmTrack</h1>
+    <div class="subtitle">Fish Farm Management</div>
+    <input type="number" id="login-pin" placeholder="PIN" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Login</button>
+    <div class="setup-link" onclick="document.getElementById('login-setup').style.display='block'">First time? Setup guide</div>
+    <div id="login-setup" style="display:none;text-align:left;margin-top:16px;font-size:12px;color:var(--text-light);line-height:1.6;">
+      <strong>Admin setup:</strong><br>
+      1. Tap the sync icon after login → connect Google Sheets<br>
+      2. Create a "Users" sheet: <code>pin | name | role</code><br>
+      3. Roles: <code>admin</code> (full access) or <code>helper</code> (add stock/mort/sort only)
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner" id="loading-text">Syncing...</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h1>🐟 ShaFat FarmTrack</h1>
+      <small><span class="user-badge" id="user-badge"></span>ShaFat Farms</small>
+    </div>
+    <div class="sync-status" onclick="openModal('modal-settings')" id="sync-indicator">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-label">Offline</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ========== DASHBOARD ========== -->
+<div class="page active" id="page-dashboard">
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🐟</div>
+      <div class="stat-value" id="dash-total-fish">0</div>
+      <div class="stat-label">Fish Alive</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏊</div>
+      <div class="stat-value" id="dash-ponds">0</div>
+      <div class="stat-label">Active Ponds</div>
+    </div>
+    <div class="stat-card income admin-fin">
+      <div class="stat-icon">💰</div>
+      <div class="stat-value" id="dash-income">0</div>
+      <div class="stat-label">Total Income</div>
+    </div>
+    <div class="stat-card expense admin-fin">
+      <div class="stat-icon">💸</div>
+      <div class="stat-value" id="dash-expense">0</div>
+      <div class="stat-label">Total Expenses</div>
+    </div>
+  </div>
+
+  <div class="card admin-fin">
+    <div class="card-title">Profit / Loss</div>
+    <div style="text-align:center;">
+      <div id="dash-profit" style="font-size:28px;font-weight:700;">GH₵0.00</div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Net Profit</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Fish Overview</div>
+    <div style="display:flex;justify-content:space-around;text-align:center;">
+      <div>
+        <div id="dash-stocked" style="font-size:20px;font-weight:700;">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Total Stocked</div>
+      </div>
+      <div>
+        <div id="dash-dead" style="font-size:20px;font-weight:700;color:var(--danger);">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Mortalities</div>
+      </div>
+      <div>
+        <div id="dash-sorted" style="font-size:20px;font-weight:700;color:var(--purple);">0</div>
+        <div style="font-size:11px;color:var(--text-light);">Sort Events</div>
+      </div>
+      <div>
+        <div id="dash-survival" style="font-size:20px;font-weight:700;color:var(--primary);">0%</div>
+        <div style="font-size:11px;color:var(--text-light);">Survival</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="dash-quarantine-card" style="display:none;">
+    <div class="card-title" style="color:var(--warning);">⚠️ Quarantine Ponds</div>
+    <div id="dash-quarantine-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All Ponds</div>
+    <div id="dash-pond-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent Activity</div>
+    <ul class="record-list" id="dash-recent"></ul>
+  </div>
+</div>
+
+<!-- ========== PONDS ========== -->
+<div class="page" id="page-ponds">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <h2 style="font-size:18px;font-weight:700;">Ponds &amp; Stock</h2>
+    <button class="btn btn-primary btn-small admin-only" onclick="openModal('modal-pond')">+ Add Pond</button>
+  </div>
+  <div id="pond-list"></div>
+
+  <div class="divider"></div>
+
+  <div id="sort-log-section">
+    <div class="section-title">Sort / Transfer Log</div>
+    <ul class="record-list" id="sort-list"></ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Mortality Log</div>
+    <ul class="record-list" id="mortality-list"></ul>
+  </div>
+</div>
+
+<!-- ========== FINANCE ========== -->
+<div class="page" id="page-finance">
+  <div class="tab-bar">
+    <button class="tab active" onclick="setFinanceTab('all',this)">All</button>
+    <button class="tab" onclick="setFinanceTab('income',this)">Income</button>
+    <button class="tab" onclick="setFinanceTab('expense',this)">Expenses</button>
+  </div>
+  <div class="filter-bar">
+    <select id="finance-month" onchange="renderFinance()"><option value="">All Months</option></select>
+    <select id="finance-pond-filter" onchange="renderFinance()"><option value="">All Ponds</option></select>
+  </div>
+  <div class="summary-bar">
+    <div class="summary-chip income" id="fin-income">In: 0</div>
+    <div class="summary-chip expense" id="fin-expense">Out: 0</div>
+    <div class="summary-chip net" id="fin-net">Net: 0</div>
+  </div>
+  <ul class="record-list" id="finance-list"></ul>
+</div>
+
+<!-- ========== HARVEST ========== -->
+<div class="page" id="page-harvest">
+  <div class="tab-bar">
+    <button class="tab active" onclick="setHarvestTab('harvest',this)">Harvests</button>
+    <button class="tab" onclick="setHarvestTab('sales',this)">Sales</button>
+  </div>
+  <div id="harvest-section"><ul class="record-list" id="harvest-list"></ul></div>
+  <div id="sales-section" style="display:none;"><ul class="record-list" id="sales-list"></ul></div>
+</div>
+
+<!-- ========== REPORTS ========== -->
+<div class="page" id="page-reports">
+  <div class="card">
+    <div class="card-title">Monthly Income vs Expenses</div>
+    <div class="chart-bar-container" id="chart-monthly"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Expenses by Category</div>
+    <div class="chart-bar-container" id="chart-categories"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pond Performance</div>
+    <div id="report-ponds"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Data Management</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn-outline" onclick="exportData()">Export Backup</button>
+      <button class="btn-outline" onclick="document.getElementById('import-file').click()">Import Backup</button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+    <button class="btn-outline" style="width:100%;margin-bottom:8px;color:var(--danger);border-color:var(--danger);" onclick="clearAllData()">Clear All Data</button>
+    <button class="btn-outline" style="width:100%;" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab-btn" onclick="openFabMenu()">+</button>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 001 1h3v-5h4v5h3a1 1 0 001-1V10"/></svg>
+    Home
+  </button>
+  <button class="nav-item" id="nav-ponds" onclick="showPage('ponds')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c1.5-2 3.5-3 6-3s4.5 1 6 3 3.5 3 6 3"/><path d="M2 19c1.5-2 3.5-3 6-3s4.5 1 6 3 3.5 3 6 3"/><circle cx="12" cy="6" r="3"/></svg>
+    Ponds
+  </button>
+  <button class="nav-item admin-only" id="nav-finance" onclick="showPage('finance')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    Finance
+  </button>
+  <button class="nav-item admin-only" id="nav-harvest" onclick="showPage('harvest')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+    Harvest
+  </button>
+  <button class="nav-item admin-only" id="nav-reports" onclick="showPage('reports')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    Reports
+  </button>
+</nav>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Settings -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Sync Status</h2>
+      <button class="modal-close" onclick="closeModal('modal-settings')">&times;</button>
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Firebase Connection</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span class="sync-dot connected" style="width:10px;height:10px;flex-shrink:0;"></span>
+        <span style="font-size:14px;font-weight:600;">Live &amp; Real-Time</span>
+      </div>
+      <p style="font-size:12px;color:var(--text-light);">Data is stored in Firebase and syncs instantly across all devices worldwide.</p>
+    </div>
+    <button class="btn btn-primary" onclick="loadAllFromCloud();closeModal('modal-settings');" style="margin-bottom:10px;">Refresh Data</button>
+  </div>
+</div>
+
+<!-- FAB Menu -->
+<div class="modal-overlay" id="modal-fab">
+  <div class="modal" style="padding-bottom:40px;">
+    <div class="modal-header">
+      <h2>Quick Add</h2>
+      <button class="modal-close" onclick="closeModal('modal-fab')">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="btn btn-success" onclick="closeModal('modal-fab');openModal('modal-stock')">🐠 Stock Fish</button>
+      <button class="btn btn-danger" onclick="closeModal('modal-fab');openModal('modal-mortality')">💀 Mortality</button>
+      <button class="btn btn-warning" style="grid-column:1/-1;" onclick="closeModal('modal-fab');openModal('modal-sort')">🔀 Sort / Transfer Fish</button>
+      <button class="btn btn-primary admin-only" onclick="closeModal('modal-fab');openModal('modal-pond')">🏊 New Pond</button>
+      <button class="btn admin-only" style="background:var(--warning);color:white;" onclick="closeModal('modal-fab');openModal('modal-finance')">💵 Income/Expense</button>
+      <button class="btn admin-only" style="background:var(--purple);color:white;" onclick="closeModal('modal-fab');openModal('modal-harvest')">🎣 Harvest</button>
+      <button class="btn admin-only" style="background:var(--blue);color:white;" onclick="closeModal('modal-fab');openModal('modal-sale')">🛒 Sale</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Pond -->
+<div class="modal-overlay" id="modal-pond">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="pond-modal-title">Add Pond</h2>
+      <button class="modal-close" onclick="closeModal('modal-pond')">&times;</button>
+    </div>
+    <form onsubmit="addPond(event)">
+      <div class="form-group">
+        <label>Fish Species</label>
+        <select id="pond-species" onchange="autoGeneratePondName()">
+          <option value="Catfish">Catfish (CAT)</option>
+          <option value="Tilapia">Tilapia (TIL)</option>
+          <option value="Salmon">Salmon (SAL)</option>
+          <option value="Carp">Carp (CAR)</option>
+          <option value="Mixed">Mixed (MIX)</option>
+          <option value="Other">Other (OTH)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pond Name <span style="font-size:11px;color:var(--text-light);">(auto-generated)</span></label>
+        <input type="text" id="pond-name" placeholder="e.g. CAT-001" required readonly style="background:#e2e8f0;font-weight:700;letter-spacing:1px;">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select id="pond-type">
+            <option value="earthen">Earthen Pond</option>
+            <option value="concrete">Concrete Tank</option>
+            <option value="plastic">Plastic Tank</option>
+            <option value="tarpaulin">Tarpaulin</option>
+            <option value="cage">Cage</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="pond-status">
+            <option value="active">Active</option>
+            <option value="quarantine">Quarantine</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Size (ft)</label>
+        <input type="text" id="pond-size" placeholder="e.g. 12x10x4">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="pond-notes" placeholder="Any additional notes..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" id="pond-submit-btn">Add Pond</button>
+    </form>
+  </div>
+</div>
+
+<!-- Stock Fish -->
+<div class="modal-overlay" id="modal-stock">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Stock Fingerlings</h2>
+      <button class="modal-close" onclick="closeModal('modal-stock')">&times;</button>
+    </div>
+    <form onsubmit="addStock(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="stock-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="stock-qty" placeholder="Number of fish" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="stock-date" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cost per Fish (GH₵)</label>
+          <input type="number" id="stock-cost" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Supplier</label>
+          <input type="text" id="stock-supplier" placeholder="Supplier name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="stock-notes" placeholder="Size, breed details..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-success">Stock Fish</button>
+    </form>
+  </div>
+</div>
+
+<!-- Mortality -->
+<div class="modal-overlay" id="modal-mortality">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Record Mortality</h2>
+      <button class="modal-close" onclick="closeModal('modal-mortality')">&times;</button>
+    </div>
+    <form onsubmit="addMortality(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="mort-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Number Dead</label>
+          <input type="number" id="mort-qty" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="mort-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Cause</label>
+        <select id="mort-cause">
+          <option value="unknown">Unknown</option>
+          <option value="disease">Disease</option>
+          <option value="water_quality">Water Quality</option>
+          <option value="overcrowding">Overcrowding</option>
+          <option value="predator">Predator</option>
+          <option value="handling">Handling Stress</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="mort-notes" placeholder="Details..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-danger" id="mort-submit-btn">Record Mortality</button>
+    </form>
+  </div>
+</div>
+
+<!-- Sort / Transfer Fish -->
+<div class="modal-overlay" id="modal-sort">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="sort-modal-title">Sort / Transfer Fish</h2>
+      <button class="modal-close" onclick="closeModal('modal-sort')">&times;</button>
+    </div>
+    <form onsubmit="addSort(event)">
+      <div class="form-group">
+        <label>From Pond (source)</label>
+        <select id="sort-from" required onchange="updateSortAvailable()"></select>
+        <div class="hint" id="sort-available-hint"></div>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="sort-category">
+          <option value="large">🔵 Large Fish (separating bigger ones)</option>
+          <option value="small">🟡 Small Fish (separating smaller ones)</option>
+          <option value="sickly">🔴 Sickly Fish (quarantine / treatment)</option>
+          <option value="other">Other Transfer</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Number of Fish</label>
+          <input type="number" id="sort-qty" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="sort-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>To Pond (destination)</label>
+        <select id="sort-to" required></select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="sort-notes" placeholder="Details about this sorting..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-warning" id="sort-submit-btn">Record Sort</button>
+    </form>
+  </div>
+</div>
+
+<!-- Finance -->
+<div class="modal-overlay" id="modal-finance">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="finance-modal-title">Add Transaction</h2>
+      <button class="modal-close" onclick="closeModal('modal-finance')">&times;</button>
+    </div>
+    <form onsubmit="addTransaction(event)">
+      <div class="form-group">
+        <div class="tab-bar">
+          <button type="button" class="tab active" id="txn-type-income" onclick="setTxnType('income')">Income</button>
+          <button type="button" class="tab" id="txn-type-expense" onclick="setTxnType('expense')">Expense</button>
+        </div>
+      </div>
+      <input type="hidden" id="txn-type" value="income">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="txn-category"></select>
+      </div>
+      <div class="form-group">
+        <label>Pond (optional)</label>
+        <select id="txn-pond"><option value="">None</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount (GH₵)</label>
+          <input type="number" id="txn-amount" placeholder="0.00" step="0.01" required min="0.01">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="txn-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="txn-desc" placeholder="What is this for?">
+      </div>
+      <button type="submit" class="btn btn-primary" id="txn-submit-btn">Save Transaction</button>
+    </form>
+  </div>
+</div>
+
+<!-- Harvest -->
+<div class="modal-overlay" id="modal-harvest">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="harvest-modal-title">Record Harvest</h2>
+      <button class="modal-close" onclick="closeModal('modal-harvest')">&times;</button>
+    </div>
+    <form onsubmit="addHarvest(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="harv-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fish Count</label>
+          <input type="number" id="harv-qty" placeholder="Number of fish" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Total Weight (kg)</label>
+          <input type="number" id="harv-weight" placeholder="0.0" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="harv-date" required>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="harv-notes" placeholder="Avg size, quality..."></textarea>
+      </div>
+      <button type="submit" class="btn" style="background:var(--purple);color:white;" id="harv-submit-btn">Record Harvest</button>
+    </form>
+  </div>
+</div>
+
+<!-- Sale -->
+<div class="modal-overlay" id="modal-sale">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="sale-modal-title">Record Sale</h2>
+      <button class="modal-close" onclick="closeModal('modal-sale')">&times;</button>
+    </div>
+    <form onsubmit="addSale(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="sale-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fish Count</label>
+          <input type="number" id="sale-qty" placeholder="0" required min="1">
+        </div>
+        <div class="form-group">
+          <label>Weight (kg)</label>
+          <input type="number" id="sale-weight" placeholder="0.0" step="0.1" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Price per kg (GH₵)</label>
+          <input type="number" id="sale-price" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label>Total (GH₵)</label>
+          <input type="number" id="sale-total" placeholder="0.00" step="0.01" required min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Buyer</label>
+        <input type="text" id="sale-buyer" placeholder="Customer name">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="sale-date" required>
+      </div>
+      <button type="submit" class="btn" style="background:var(--blue);color:white;" id="sale-submit-btn">Record Sale</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ============ DATA LAYER ============
+const STORAGE_KEY = 'shafat_farmtrack_data';
+
+function getDefaultData() {
+  return {
+    ponds: [], stockings: [], mortalities: [], sortings: [],
+    transactions: [], harvests: [], sales: []
+  };
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...getDefaultData(), ...JSON.parse(raw) };
+  } catch(e) {}
+  return getDefaultData();
+}
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+let data = loadData();
+
+// ============ UTILITIES ============
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(n) { return 'GH₵' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtNum(n) { return Number(n||0).toLocaleString(); }
+function fmtDate(d) {
+  if (!d) return '';
+  const s = String(d).split('T')[0];
+  const dt = new Date(s + 'T00:00:00');
+  if (isNaN(dt.getTime())) return '';
+  return dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function formatCategory(c) { return String(c||'').replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+function normalizeDates(d) {
+  const cols = ['ponds','stockings','mortalities','sortings','transactions','harvests','sales'];
+  cols.forEach(col => {
+    if (d[col]) d[col].forEach(r => {
+      ['date','createdAt'].forEach(f => {
+        if (r[f] && String(r[f]).includes('T')) r[f] = String(r[f]).split('T')[0];
+      });
+    });
+  });
+}
+
+// ============ POND STATS ============
+function getPondStats(pondId) {
+  const stocked    = data.stockings.filter(s=>s.pondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
+  const dead       = data.mortalities.filter(m=>m.pondId===pondId).reduce((a,m)=>a+Number(m.qty),0);
+  const harvested  = data.harvests.filter(h=>h.pondId===pondId).reduce((a,h)=>a+Number(h.qty),0);
+  const sortedOut  = (data.sortings||[]).filter(s=>s.fromPondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
+  const sortedIn   = (data.sortings||[]).filter(s=>s.toPondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
+  const alive = Math.max(0, stocked - dead - harvested - sortedOut + sortedIn);
+  return { stocked, dead, harvested, sortedOut, sortedIn, alive };
+}
+function getPondName(id) { const p=data.ponds.find(p=>p.id===id); return p?p.name:'Unknown'; }
+
+// ============ NAVIGATION ============
+let currentPage = 'dashboard';
+const PAGE_NAMES = ['dashboard','ponds','finance','harvest','reports'];
+
+function showPage(name) {
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl = document.getElementById('nav-'+name);
+  if (navEl) navEl.classList.add('active');
+  refreshPage();
+}
+function refreshPage() {
+  switch(currentPage) {
+    case 'dashboard': renderDashboard(); break;
+    case 'ponds':     renderPonds(); break;
+    case 'finance':   renderFinance(); break;
+    case 'harvest':   renderHarvestPage(); break;
+    case 'reports':   renderReports(); break;
+  }
+}
+
+// ============ ROLE MANAGEMENT ============
+let currentUser = null;
+
+function isAdmin() { return currentUser && currentUser.role === 'admin'; }
+
+function applyRoleUI() {
+  const admin = isAdmin();
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = admin ? '' : 'none');
+  document.querySelectorAll('.admin-fin').forEach(el => el.style.display = admin ? '' : 'none');
+  // Adjust nav flex for helper (fewer items, distribute evenly)
+  const nav = document.querySelector('.bottom-nav');
+  nav.style.setProperty('--nav-count', admin ? '5' : '2');
+}
+
+// ============ MODALS ============
+let editMode = { type: null, id: null };
+
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+  populatePondSelects();
+  document.querySelectorAll('.modal-overlay.active input[type="date"]').forEach(inp=>{
+    if (!inp.value) inp.value = today();
+  });
+  if (id === 'modal-pond') autoGeneratePondName();
+  if (id === 'modal-sort') updateSortAvailable();
+  if (id === 'modal-finance') setTxnType('income');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+  if (editMode.type) { editMode = {type:null,id:null}; resetModalTitles(); }
+}
+function openFabMenu() { openModal('modal-fab'); }
+function resetModalTitles() {
+  document.getElementById('pond-modal-title').textContent = 'Add Pond';
+  document.getElementById('pond-submit-btn').textContent = 'Add Pond';
+  document.getElementById('pond-name').setAttribute('readonly','');
+  document.getElementById('mort-submit-btn').textContent = 'Record Mortality';
+  document.getElementById('sort-modal-title').textContent = 'Sort / Transfer Fish';
+  document.getElementById('sort-submit-btn').textContent = 'Record Sort';
+  document.getElementById('finance-modal-title').textContent = 'Add Transaction';
+  document.getElementById('txn-submit-btn').textContent = 'Save Transaction';
+  document.getElementById('harvest-modal-title').textContent = 'Record Harvest';
+  document.getElementById('harv-submit-btn').textContent = 'Record Harvest';
+  document.getElementById('sale-modal-title').textContent = 'Record Sale';
+  document.getElementById('sale-submit-btn').textContent = 'Record Sale';
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+      if (editMode.type) { editMode={type:null,id:null}; resetModalTitles(); }
+    }
+  });
+});
+
+function populatePondSelects() {
+  const allSelects = ['stock-pond','mort-pond','txn-pond','harv-pond','sale-pond','finance-pond-filter'];
+  allSelects.forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const cur = sel.value;
+    const isFilter = id.includes('filter');
+    const isOpt = id === 'txn-pond';
+    sel.innerHTML = isFilter ? '<option value="">All Ponds</option>' : isOpt ? '<option value="">None</option>' : '';
+    data.ponds.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name}${p.status==='quarantine'?' 🔴':p.status==='inactive'?' ⚫':''}</option>`; });
+    if (cur) sel.value = cur;
+  });
+  // Sort from/to selects
+  const fromSel = document.getElementById('sort-from');
+  const toSel = document.getElementById('sort-to');
+  if (fromSel) {
+    const cur = fromSel.value;
+    fromSel.innerHTML = '<option value="">Select source pond</option>';
+    data.ponds.filter(p=>p.status!=='inactive').forEach(p => {
+      fromSel.innerHTML += `<option value="${p.id}">${p.name}${p.status==='quarantine'?' 🔴':''}</option>`;
+    });
+    if (cur) fromSel.value = cur;
+  }
+  if (toSel) {
+    const cur = toSel.value;
+    toSel.innerHTML = '<option value="">Select destination pond</option>';
+    data.ponds.filter(p=>p.status!=='inactive').forEach(p => {
+      toSel.innerHTML += `<option value="${p.id}">${p.name}${p.status==='quarantine'?' 🔴':''}</option>`;
+    });
+    if (cur) toSel.value = cur;
+  }
+}
+
+function updateSortAvailable() {
+  const fromId = document.getElementById('sort-from') && document.getElementById('sort-from').value;
+  const hint = document.getElementById('sort-available-hint');
+  if (!hint) return;
+  if (fromId) {
+    const s = getPondStats(fromId);
+    hint.textContent = `Available: ~${fmtNum(s.alive)} fish in this pond`;
+    hint.style.color = s.alive < 50 ? 'var(--danger)' : 'var(--text-light)';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+// ============ POND MANAGEMENT ============
+const speciesPrefixes = {
+  'Catfish':'CAT','Tilapia':'TIL','Salmon':'SAL','Carp':'CAR','Mixed':'MIX','Other':'OTH'
+};
+function autoGeneratePondName() {
+  if (editMode.type === 'pond') return;
+  const species = document.getElementById('pond-species').value;
+  const prefix = speciesPrefixes[species] || 'OTH';
+  const count = data.ponds.filter(p=>p.name.startsWith(prefix+'-')).length;
+  document.getElementById('pond-name').value = prefix + '-' + String(count+1).padStart(3,'0');
+}
+async function addPond(e) {
+  e.preventDefault();
+  const pond = {
+    id: editMode.type==='pond' ? editMode.id : genId(),
+    name: document.getElementById('pond-name').value.trim(),
+    type: document.getElementById('pond-type').value,
+    status: document.getElementById('pond-status').value,
+    size: document.getElementById('pond-size').value.trim(),
+    species: document.getElementById('pond-species').value,
+    notes: document.getElementById('pond-notes').value.trim(),
+    createdAt: today()
+  };
+  if (editMode.type==='pond') {
+    await apiUpdate('ponds', pond);
+    showToast('Pond updated!');
+  } else {
+    await apiAdd('ponds', pond);
+    showToast('Pond added!');
+  }
+  editMode={type:null,id:null};
+  closeModal('modal-pond');
+  e.target.reset();
+  refreshPage();
+}
+function editPond(id) {
+  const p = data.ponds.find(p=>p.id===id); if (!p) return;
+  editMode = {type:'pond',id};
+  openModal('modal-pond');
+  document.getElementById('pond-species').value = p.species || 'Catfish';
+  document.getElementById('pond-name').value = p.name;
+  document.getElementById('pond-name').removeAttribute('readonly');
+  document.getElementById('pond-type').value = p.type || 'earthen';
+  document.getElementById('pond-status').value = p.status || 'active';
+  document.getElementById('pond-size').value = p.size || '';
+  document.getElementById('pond-notes').value = p.notes || '';
+  document.getElementById('pond-modal-title').textContent = 'Edit Pond';
+  document.getElementById('pond-submit-btn').textContent = 'Save Changes';
+}
+async function deletePond(id) {
+  if (!confirm('Delete this pond and all its records?')) return;
+  for (const r of data.stockings.filter(s=>s.pondId===id)) await apiDelete('stockings',r.id);
+  for (const r of data.mortalities.filter(m=>m.pondId===id)) await apiDelete('mortalities',r.id);
+  for (const r of data.harvests.filter(h=>h.pondId===id)) await apiDelete('harvests',r.id);
+  for (const r of data.sales.filter(s=>s.pondId===id)) await apiDelete('sales',r.id);
+  for (const r of (data.sortings||[]).filter(s=>s.fromPondId===id||s.toPondId===id)) await apiDelete('sortings',r.id);
+  await apiDelete('ponds',id);
+  showToast('Pond deleted');
+  refreshPage();
+}
+
+// ============ STOCKING ============
+async function addStock(e) {
+  e.preventDefault();
+  const qty = parseInt(document.getElementById('stock-qty').value);
+  const costPer = parseFloat(document.getElementById('stock-cost').value)||0;
+  const stocking = {
+    id: genId(),
+    pondId: document.getElementById('stock-pond').value,
+    qty, costPer,
+    date: document.getElementById('stock-date').value,
+    supplier: document.getElementById('stock-supplier').value.trim(),
+    notes: document.getElementById('stock-notes').value.trim()
+  };
+  await apiAdd('stockings', stocking);
+  if (costPer > 0) {
+    await apiAdd('transactions', {
+      id: genId(), type:'expense', category:'fingerlings',
+      pondId: stocking.pondId, amount: qty*costPer,
+      date: stocking.date,
+      desc: `Fingerlings - ${getPondName(stocking.pondId)} (${qty} × GH₵${costPer})`
+    });
+  }
+  closeModal('modal-stock'); e.target.reset();
+  showToast(`${fmtNum(qty)} fish stocked!`);
+  refreshPage();
+}
+
+// ============ MORTALITY ============
+async function addMortality(e) {
+  e.preventDefault();
+  if (editMode.type==='mortality') {
+    const m = data.mortalities.find(m=>m.id===editMode.id);
+    if (m) {
+      m.pondId = document.getElementById('mort-pond').value;
+      m.qty = parseInt(document.getElementById('mort-qty').value);
+      m.date = document.getElementById('mort-date').value;
+      m.cause = document.getElementById('mort-cause').value;
+      m.notes = document.getElementById('mort-notes').value.trim();
+      await apiUpdate('mortalities', m);
+    }
+    editMode={type:null,id:null};
+    showToast('Mortality updated!');
+  } else {
+    await apiAdd('mortalities', {
+      id: genId(),
+      pondId: document.getElementById('mort-pond').value,
+      qty: parseInt(document.getElementById('mort-qty').value),
+      date: document.getElementById('mort-date').value,
+      cause: document.getElementById('mort-cause').value,
+      notes: document.getElementById('mort-notes').value.trim()
+    });
+    showToast('Mortality recorded');
+  }
+  closeModal('modal-mortality'); e.target.reset(); refreshPage();
+}
+function editMortality(id) {
+  const m = data.mortalities.find(m=>m.id===id); if (!m) return;
+  editMode={type:'mortality',id};
+  openModal('modal-mortality');
+  document.getElementById('mort-pond').value = m.pondId;
+  document.getElementById('mort-qty').value = m.qty;
+  document.getElementById('mort-date').value = m.date;
+  document.getElementById('mort-cause').value = m.cause;
+  document.getElementById('mort-notes').value = m.notes||'';
+  document.getElementById('mort-submit-btn').textContent = 'Save Changes';
+}
+async function deleteMortality(id) {
+  if (!isAdmin()) return;
+  await apiDelete('mortalities',id); showToast('Record deleted'); refreshPage();
+}
+
+// ============ SORTING ============
+const sortCategoryLabel = { large:'Large Fish', small:'Small Fish', sickly:'Sickly', other:'Transfer' };
+
+async function addSort(e) {
+  e.preventDefault();
+  const fromId = document.getElementById('sort-from').value;
+  const toId = document.getElementById('sort-to').value;
+  if (fromId === toId) { showToast('Source and destination must differ'); return; }
+  const qty = parseInt(document.getElementById('sort-qty').value);
+
+  if (editMode.type==='sort') {
+    const s = (data.sortings||[]).find(s=>s.id===editMode.id);
+    if (s) {
+      s.fromPondId = fromId; s.toPondId = toId; s.qty = qty;
+      s.category = document.getElementById('sort-category').value;
+      s.date = document.getElementById('sort-date').value;
+      s.notes = document.getElementById('sort-notes').value.trim();
+      await apiUpdate('sortings', s);
+    }
+    editMode={type:null,id:null};
+    showToast('Sort record updated!');
+  } else {
+    await apiAdd('sortings', {
+      id: genId(), fromPondId: fromId, toPondId: toId, qty,
+      category: document.getElementById('sort-category').value,
+      date: document.getElementById('sort-date').value,
+      notes: document.getElementById('sort-notes').value.trim()
+    });
+    showToast(`${fmtNum(qty)} fish sorted from ${getPondName(fromId)} → ${getPondName(toId)}`);
+  }
+  closeModal('modal-sort'); e.target.reset(); refreshPage();
+}
+function editSort(id) {
+  const s = (data.sortings||[]).find(s=>s.id===id); if (!s) return;
+  editMode={type:'sort',id};
+  openModal('modal-sort');
+  setTimeout(()=>{
+    document.getElementById('sort-from').value = s.fromPondId;
+    document.getElementById('sort-to').value = s.toPondId;
+    document.getElementById('sort-qty').value = s.qty;
+    document.getElementById('sort-category').value = s.category||'other';
+    document.getElementById('sort-date').value = s.date;
+    document.getElementById('sort-notes').value = s.notes||'';
+    updateSortAvailable();
+  }, 50);
+  document.getElementById('sort-modal-title').textContent = 'Edit Sort Record';
+  document.getElementById('sort-submit-btn').textContent = 'Save Changes';
+}
+async function deleteSort(id) {
+  if (!isAdmin()) return;
+  await apiDelete('sortings',id); showToast('Sort record deleted'); refreshPage();
+}
+
+// ============ TRANSACTIONS ============
+let financeFilter = 'all';
+const incomeCategories = ['fish_sales','fingerling_sales','other_income'];
+const expenseCategories = ['fingerlings','feed','medication','equipment','labor','transport','materials','pond_setup','water','utilities','maintenance','other_expense'];
+
+function setTxnType(type) {
+  document.getElementById('txn-type').value = type;
+  document.getElementById('txn-type-income').classList.toggle('active', type==='income');
+  document.getElementById('txn-type-expense').classList.toggle('active', type==='expense');
+  const cats = type==='income' ? incomeCategories : expenseCategories;
+  document.getElementById('txn-category').innerHTML = cats.map(c=>`<option value="${c}">${formatCategory(c)}</option>`).join('');
+}
+async function addTransaction(e) {
+  e.preventDefault();
+  if (editMode.type==='transaction') {
+    const t = data.transactions.find(t=>t.id===editMode.id);
+    if (t) {
+      t.type = document.getElementById('txn-type').value;
+      t.category = document.getElementById('txn-category').value;
+      t.pondId = document.getElementById('txn-pond').value||'';
+      t.amount = parseFloat(document.getElementById('txn-amount').value);
+      t.date = document.getElementById('txn-date').value;
+      t.desc = document.getElementById('txn-desc').value.trim();
+      await apiUpdate('transactions', t);
+    }
+    editMode={type:null,id:null};
+    showToast('Transaction updated!');
+  } else {
+    await apiAdd('transactions', {
+      id: genId(),
+      type: document.getElementById('txn-type').value,
+      category: document.getElementById('txn-category').value,
+      pondId: document.getElementById('txn-pond').value||'',
+      amount: parseFloat(document.getElementById('txn-amount').value),
+      date: document.getElementById('txn-date').value,
+      desc: document.getElementById('txn-desc').value.trim()
+    });
+    showToast('Transaction saved!');
+  }
+  closeModal('modal-finance'); e.target.reset(); setTxnType('income'); refreshPage();
+}
+function editTransaction(id) {
+  const t = data.transactions.find(t=>t.id===id); if (!t) return;
+  editMode={type:'transaction',id};
+  openModal('modal-finance');
+  setTxnType(t.type);
+  document.getElementById('txn-category').value = t.category;
+  document.getElementById('txn-pond').value = t.pondId||'';
+  document.getElementById('txn-amount').value = t.amount;
+  document.getElementById('txn-date').value = t.date;
+  document.getElementById('txn-desc').value = t.desc||'';
+  document.getElementById('finance-modal-title').textContent = 'Edit Transaction';
+  document.getElementById('txn-submit-btn').textContent = 'Save Changes';
+}
+async function deleteTransaction(id) {
+  await apiDelete('transactions',id); showToast('Deleted'); refreshPage();
+}
+
+// ============ HARVEST ============
+async function addHarvest(e) {
+  e.preventDefault();
+  if (editMode.type==='harvest') {
+    const h = data.harvests.find(h=>h.id===editMode.id);
+    if (h) {
+      h.pondId = document.getElementById('harv-pond').value;
+      h.qty = parseInt(document.getElementById('harv-qty').value);
+      h.weight = parseFloat(document.getElementById('harv-weight').value)||0;
+      h.date = document.getElementById('harv-date').value;
+      h.notes = document.getElementById('harv-notes').value.trim();
+      await apiUpdate('harvests', h);
+    }
+    editMode={type:null,id:null};
+    showToast('Harvest updated!');
+  } else {
+    await apiAdd('harvests', {
+      id: genId(),
+      pondId: document.getElementById('harv-pond').value,
+      qty: parseInt(document.getElementById('harv-qty').value),
+      weight: parseFloat(document.getElementById('harv-weight').value)||0,
+      date: document.getElementById('harv-date').value,
+      notes: document.getElementById('harv-notes').value.trim()
+    });
+    showToast('Harvest recorded!');
+  }
+  closeModal('modal-harvest'); e.target.reset(); refreshPage();
+}
+function editHarvest(id) {
+  const h = data.harvests.find(h=>h.id===id); if (!h) return;
+  editMode={type:'harvest',id};
+  openModal('modal-harvest');
+  document.getElementById('harv-pond').value = h.pondId;
+  document.getElementById('harv-qty').value = h.qty;
+  document.getElementById('harv-weight').value = h.weight||'';
+  document.getElementById('harv-date').value = h.date;
+  document.getElementById('harv-notes').value = h.notes||'';
+  document.getElementById('harvest-modal-title').textContent = 'Edit Harvest';
+  document.getElementById('harv-submit-btn').textContent = 'Save Changes';
+}
+async function deleteHarvest(id) { await apiDelete('harvests',id); showToast('Deleted'); refreshPage(); }
+
+// ============ SALES ============
+async function addSale(e) {
+  e.preventDefault();
+  const total = parseFloat(document.getElementById('sale-total').value);
+  if (editMode.type==='sale') {
+    const s = data.sales.find(s=>s.id===editMode.id);
+    if (s) {
+      s.pondId = document.getElementById('sale-pond').value;
+      s.qty = parseInt(document.getElementById('sale-qty').value);
+      s.weight = parseFloat(document.getElementById('sale-weight').value)||0;
+      s.pricePerKg = parseFloat(document.getElementById('sale-price').value)||0;
+      s.total = total;
+      s.buyer = document.getElementById('sale-buyer').value.trim();
+      s.date = document.getElementById('sale-date').value;
+      await apiUpdate('sales', s);
+    }
+    editMode={type:null,id:null};
+    showToast('Sale updated!');
+  } else {
+    const sale = {
+      id: genId(),
+      pondId: document.getElementById('sale-pond').value,
+      qty: parseInt(document.getElementById('sale-qty').value),
+      weight: parseFloat(document.getElementById('sale-weight').value)||0,
+      pricePerKg: parseFloat(document.getElementById('sale-price').value)||0,
+      total, buyer: document.getElementById('sale-buyer').value.trim(),
+      date: document.getElementById('sale-date').value
+    };
+    await apiAdd('sales', sale);
+    await apiAdd('transactions', {
+      id: genId(), type:'income', category:'fish_sales',
+      pondId: sale.pondId, amount: total, date: sale.date,
+      desc: `Sale to ${sale.buyer||'customer'}: ${sale.qty} fish, ${sale.weight}kg`
+    });
+    showToast('Sale recorded!');
+  }
+  closeModal('modal-sale'); e.target.reset(); refreshPage();
+}
+function editSale(id) {
+  const s = data.sales.find(s=>s.id===id); if (!s) return;
+  editMode={type:'sale',id};
+  openModal('modal-sale');
+  document.getElementById('sale-pond').value = s.pondId;
+  document.getElementById('sale-qty').value = s.qty;
+  document.getElementById('sale-weight').value = s.weight||'';
+  document.getElementById('sale-price').value = s.pricePerKg||'';
+  document.getElementById('sale-total').value = s.total;
+  document.getElementById('sale-buyer').value = s.buyer||'';
+  document.getElementById('sale-date').value = s.date;
+  document.getElementById('sale-modal-title').textContent = 'Edit Sale';
+  document.getElementById('sale-submit-btn').textContent = 'Save Changes';
+}
+async function deleteSale(id) { await apiDelete('sales',id); showToast('Deleted'); refreshPage(); }
+
+document.getElementById('sale-weight').addEventListener('input', calcSaleTotal);
+document.getElementById('sale-price').addEventListener('input', calcSaleTotal);
+function calcSaleTotal() {
+  const w = parseFloat(document.getElementById('sale-weight').value)||0;
+  const p = parseFloat(document.getElementById('sale-price').value)||0;
+  if (w>0&&p>0) document.getElementById('sale-total').value = (w*p).toFixed(2);
+}
+
+// ============ RENDER: DASHBOARD ============
+function renderDashboard() {
+  const sortings = data.sortings || [];
+  const totalStocked   = data.stockings.reduce((a,s)=>a+Number(s.qty),0);
+  const totalDead      = data.mortalities.reduce((a,m)=>a+Number(m.qty),0);
+  const totalHarvested = data.harvests.reduce((a,h)=>a+Number(h.qty),0);
+  const totalSortedNet = 0; // Sorting is pond-to-pond, net=0 for total
+  // Alive = total stocked - dead - harvested (sorting is internal redistribution)
+  const totalAlive = Math.max(0, totalStocked - totalDead - totalHarvested);
+  const totalIncome  = data.transactions.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const totalExpense = data.transactions.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const profit = totalIncome - totalExpense;
+  const survival = totalStocked>0 ? (((totalStocked-totalDead)/totalStocked)*100).toFixed(1) : '0.0';
+  const activePonds = data.ponds.filter(p=>p.status!=='inactive').length;
+
+  document.getElementById('dash-total-fish').textContent = fmtNum(totalAlive);
+  document.getElementById('dash-ponds').textContent = activePonds;
+  document.getElementById('dash-income').textContent = fmt(totalIncome);
+  document.getElementById('dash-expense').textContent = fmt(totalExpense);
+  const profitEl = document.getElementById('dash-profit');
+  profitEl.textContent = fmt(profit);
+  profitEl.style.color = profit>=0 ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('dash-stocked').textContent = fmtNum(totalStocked);
+  document.getElementById('dash-dead').textContent = fmtNum(totalDead);
+  document.getElementById('dash-sorted').textContent = fmtNum(sortings.length);
+  document.getElementById('dash-survival').textContent = survival + '%';
+
+  // Quarantine ponds
+  const quarantinePonds = data.ponds.filter(p=>p.status==='quarantine');
+  const qCard = document.getElementById('dash-quarantine-card');
+  if (quarantinePonds.length > 0) {
+    qCard.style.display = '';
+    document.getElementById('dash-quarantine-list').innerHTML = quarantinePonds.map(p => {
+      const s = getPondStats(p.id);
+      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div><strong>${p.name}</strong> <span style="font-size:11px;color:var(--text-light);">${p.species||''}</span></div>
+        <div style="font-size:13px;color:var(--warning);font-weight:600;">${fmtNum(s.alive)} fish</div>
+      </div>`;
+    }).join('');
+  } else {
+    qCard.style.display = 'none';
+  }
+
+  // Pond overview
+  const pondEl = document.getElementById('dash-pond-list');
+  if (data.ponds.length===0) {
+    pondEl.innerHTML = '<div class="empty-state"><div class="icon">🏊</div><p>No ponds yet. Tap + to add one!</p></div>';
+  } else {
+    pondEl.innerHTML = data.ponds.map(p => {
+      const s = getPondStats(p.id);
+      const statusBadge = p.status && p.status!=='active'
+        ? `<span class="status-badge ${p.status}">${p.status==='quarantine'?'Quarantine':'Inactive'}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <span style="font-weight:600;">${p.name}</span>${statusBadge}
+          <div style="font-size:11px;color:var(--text-light);">${p.species||''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:var(--primary);">${fmtNum(s.alive)} alive</div>
+          <div style="font-size:11px;color:var(--danger);">${fmtNum(s.dead)} dead</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Recent activity
+  const sortLabels = { large:'Large fish sorted', small:'Small fish sorted', sickly:'Sickly fish quarantined', other:'Fish transferred' };
+  const allEvents = [
+    ...data.stockings.map(s=>({date:s.date,text:`Stocked ${fmtNum(s.qty)} in ${getPondName(s.pondId)}`,icon:'🐠'})),
+    ...data.mortalities.map(m=>({date:m.date,text:`${fmtNum(m.qty)} died in ${getPondName(m.pondId)}`,icon:'💀'})),
+    ...(data.sortings||[]).map(s=>({date:s.date,text:`${sortLabels[s.category]||'Fish sorted'}: ${fmtNum(s.qty)} from ${getPondName(s.fromPondId)} → ${getPondName(s.toPondId)}`,icon:'🔀'})),
+    ...data.transactions.map(t=>({date:t.date,text:`${t.type==='income'?'+':'-'}${fmt(t.amount)} - ${t.desc||formatCategory(t.category)}`,icon:t.type==='income'?'💰':'💸'})),
+    ...data.harvests.map(h=>({date:h.date,text:`Harvested ${fmtNum(h.qty)} from ${getPondName(h.pondId)}`,icon:'🎣'})),
+  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
+
+  const recentEl = document.getElementById('dash-recent');
+  if (allEvents.length===0) {
+    recentEl.innerHTML = '<div class="empty-state"><p>No activity yet. Start by adding a pond!</p></div>';
+  } else {
+    recentEl.innerHTML = allEvents.map(ev=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${ev.icon} ${ev.text}</h4>
+          <p>${fmtDate(ev.date)}</p>
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: PONDS ============
+function renderPonds() {
+  const el = document.getElementById('pond-list');
+  const admin = isAdmin();
+  if (data.ponds.length===0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🐟</div><p>No ponds yet.</p></div>';
+  } else {
+    el.innerHTML = data.ponds.map(p => {
+      const s = getPondStats(p.id);
+      const st = p.status||'active';
+      const statusBadge = st!=='active' ? `<span class="status-badge ${st}">${st==='quarantine'?'⚠️ Quarantine':'Inactive'}</span>` : '';
+      const sortInfo = (s.sortedIn>0||s.sortedOut>0) ?
+        `<div class="pond-stat">Sorted In: <strong style="color:var(--success)">${fmtNum(s.sortedIn)}</strong></div>
+         <div class="pond-stat">Sorted Out: <strong style="color:var(--warning)">${fmtNum(s.sortedOut)}</strong></div>` : '';
+      return `<div class="pond-card ${st}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <h3>${p.name}${statusBadge}</h3>
+            <div style="font-size:12px;color:var(--text-light);">${p.species||''} · ${p.type||''} ${p.size?'· '+p.size:''}</div>
+          </div>
+          <div style="display:flex;gap:4px;">
+            ${admin ? `<button class="btn-edit" onclick="editPond('${p.id}')" title="Edit">✎</button>
+            <button class="btn-delete" onclick="deletePond('${p.id}')" title="Delete">×</button>` : ''}
+          </div>
+        </div>
+        <div class="pond-stats">
+          <div class="pond-stat">Alive: <strong style="color:var(--primary);font-size:14px;">${fmtNum(s.alive)}</strong></div>
+          <div class="pond-stat">Stocked: <strong>${fmtNum(s.stocked)}</strong></div>
+          <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmtNum(s.dead)}</strong></div>
+          <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmtNum(s.harvested)}</strong></div>
+          ${sortInfo}
+        </div>
+        <div class="pond-actions">
+          <button class="btn btn-small btn-success" onclick="openModal('modal-stock');setTimeout(()=>document.getElementById('stock-pond').value='${p.id}',50)">+ Stock</button>
+          <button class="btn btn-small btn-danger" onclick="openModal('modal-mortality');setTimeout(()=>document.getElementById('mort-pond').value='${p.id}',50)">+ Mortality</button>
+          <button class="btn btn-small btn-warning" onclick="openModal('modal-sort');setTimeout(()=>{document.getElementById('sort-from').value='${p.id}';updateSortAvailable();},50)">🔀 Sort</button>
+          ${admin ? `<button class="btn btn-small" style="background:var(--purple);color:white;" onclick="openModal('modal-harvest');setTimeout(()=>document.getElementById('harv-pond').value='${p.id}',50)">🎣 Harvest</button>` : ''}
+        </div>
+        ${p.notes ? `<div style="font-size:12px;color:var(--text-light);margin-top:8px;">${p.notes}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // Sort log
+  const sortEl = document.getElementById('sort-list');
+  const sorts = [...(data.sortings||[])].sort((a,b)=>b.date.localeCompare(a.date));
+  if (sorts.length===0) {
+    sortEl.innerHTML = '<div class="empty-state"><p>No sort records yet</p></div>';
+  } else {
+    sortEl.innerHTML = sorts.map(s=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4><span class="sort-badge ${s.category||'other'}">${sortCategoryLabel[s.category]||'Transfer'}</span>
+          ${fmtNum(s.qty)} fish: ${getPondName(s.fromPondId)} → ${getPondName(s.toPondId)}</h4>
+          <p>${fmtDate(s.date)}${s.createdBy?' · by '+s.createdBy:''}${s.notes?' · '+s.notes:''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount" style="color:var(--purple);">-${fmtNum(s.qty)}</span>
+          ${admin ? `<button class="btn-edit" onclick="editSort('${s.id}')" title="Edit">✎</button>
+          <button class="btn-delete" onclick="deleteSort('${s.id}')">×</button>` : ''}
+        </div>
+      </li>`).join('');
+  }
+
+  // Mortality log
+  const mortEl = document.getElementById('mortality-list');
+  const morts = [...data.mortalities].sort((a,b)=>b.date.localeCompare(a.date));
+  if (morts.length===0) {
+    mortEl.innerHTML = '<div class="empty-state"><p>No mortality records</p></div>';
+  } else {
+    mortEl.innerHTML = morts.map(m=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${fmtNum(m.qty)} fish — ${getPondName(m.pondId)}</h4>
+          <p>${fmtDate(m.date)} · ${formatCategory(m.cause)}${m.createdBy?' · by '+m.createdBy:''}${m.notes?' · '+m.notes:''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount expense">-${fmtNum(m.qty)}</span>
+          <button class="btn-edit" onclick="editMortality('${m.id}')" title="Edit">✎</button>
+          ${admin ? `<button class="btn-delete" onclick="deleteMortality('${m.id}')">×</button>` : ''}
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: FINANCE ============
+function setFinanceTab(tab, el) {
+  financeFilter = tab;
+  document.querySelectorAll('#page-finance .tab-bar .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderFinance();
+}
+function renderFinance() {
+  populateMonthFilter();
+  const monthFilter = document.getElementById('finance-month').value;
+  const pondFilter = document.getElementById('finance-pond-filter').value;
+  let txns = [...data.transactions].sort((a,b)=>b.date.localeCompare(a.date));
+  if (financeFilter!=='all') txns = txns.filter(t=>t.type===financeFilter);
+  if (monthFilter) txns = txns.filter(t=>t.date.substring(0,7)===monthFilter);
+  if (pondFilter) txns = txns.filter(t=>t.pondId===pondFilter);
+  const totalIn  = txns.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const totalOut = txns.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  document.getElementById('fin-income').textContent = `In: ${fmt(totalIn)}`;
+  document.getElementById('fin-expense').textContent = `Out: ${fmt(totalOut)}`;
+  document.getElementById('fin-net').textContent = `Net: ${fmt(totalIn-totalOut)}`;
+  const el = document.getElementById('finance-list');
+  if (txns.length===0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">💰</div><p>No transactions yet</p></div>';
+  } else {
+    el.innerHTML = txns.map(t=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${t.desc||formatCategory(t.category)}</h4>
+          <p>${fmtDate(t.date)}${t.pondId?' · '+getPondName(t.pondId):''} · ${formatCategory(t.category)}${t.createdBy?' · by '+t.createdBy:''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount ${t.type}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</span>
+          <button class="btn-edit" onclick="editTransaction('${t.id}')" title="Edit">✎</button>
+          <button class="btn-delete" onclick="deleteTransaction('${t.id}')">×</button>
+        </div>
+      </li>`).join('');
+  }
+}
+function populateMonthFilter() {
+  const sel = document.getElementById('finance-month');
+  const months = [...new Set(data.transactions.map(t=>t.date.substring(0,7)))].sort().reverse();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Months</option>' + months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+// ============ RENDER: HARVEST ============
+let harvestTab = 'harvest';
+function setHarvestTab(tab, el) {
+  harvestTab = tab;
+  document.querySelectorAll('#page-harvest .tab-bar .tab').forEach(t=>t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('harvest-section').style.display = tab==='harvest' ? 'block' : 'none';
+  document.getElementById('sales-section').style.display = tab==='sales' ? 'block' : 'none';
+  renderHarvestPage();
+}
+function renderHarvestPage() {
+  const harvEl = document.getElementById('harvest-list');
+  const harvests = [...data.harvests].sort((a,b)=>b.date.localeCompare(a.date));
+  if (harvests.length===0) {
+    harvEl.innerHTML = '<div class="empty-state"><div class="icon">🎣</div><p>No harvests recorded yet</p></div>';
+  } else {
+    harvEl.innerHTML = harvests.map(h=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${fmtNum(h.qty)} fish from ${getPondName(h.pondId)}</h4>
+          <p>${fmtDate(h.date)}${h.weight?' · '+h.weight+'kg':''}${h.createdBy?' · by '+h.createdBy:''}${h.notes?' · '+h.notes:''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount" style="color:var(--purple);">${h.weight?h.weight+'kg':h.qty+' fish'}</span>
+          <button class="btn-edit" onclick="editHarvest('${h.id}')" title="Edit">✎</button>
+          <button class="btn-delete" onclick="deleteHarvest('${h.id}')">×</button>
+        </div>
+      </li>`).join('');
+  }
+  const salesEl = document.getElementById('sales-list');
+  const sales = [...data.sales].sort((a,b)=>b.date.localeCompare(a.date));
+  if (sales.length===0) {
+    salesEl.innerHTML = '<div class="empty-state"><div class="icon">💵</div><p>No sales recorded yet</p></div>';
+  } else {
+    salesEl.innerHTML = sales.map(s=>`
+      <li class="record-item">
+        <div class="record-info">
+          <h4>${fmtNum(s.qty)} fish ${s.buyer?'to '+s.buyer:''}</h4>
+          <p>${fmtDate(s.date)} · ${getPondName(s.pondId)}${s.weight?' · '+s.weight+'kg':''}${s.createdBy?' · by '+s.createdBy:''}</p>
+        </div>
+        <div class="record-actions">
+          <span class="record-amount income">+${fmt(s.total)}</span>
+          <button class="btn-edit" onclick="editSale('${s.id}')" title="Edit">✎</button>
+          <button class="btn-delete" onclick="deleteSale('${s.id}')">×</button>
+        </div>
+      </li>`).join('');
+  }
+}
+
+// ============ RENDER: REPORTS ============
+function renderReports() {
+  renderMonthlyChart();
+  renderCategoryChart();
+  renderPondReport();
+}
+function renderMonthlyChart() {
+  const el = document.getElementById('chart-monthly');
+  const months = {};
+  data.transactions.forEach(t => {
+    const m = t.date.substring(0,7);
+    if (!months[m]) months[m]={income:0,expense:0};
+    months[m][t.type] += t.amount;
+  });
+  const sorted = Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6).reverse();
+  if (sorted.length===0) { el.innerHTML='<div class="empty-state"><p>No data yet</p></div>'; return; }
+  const maxVal = Math.max(...sorted.map(([,v])=>Math.max(v.income,v.expense)),1);
+  el.innerHTML = sorted.map(([month,vals])=>`
+    <div class="chart-bar-row">
+      <div class="chart-bar-label">${month.slice(5)}</div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <div class="chart-bar-track"><div class="chart-bar-fill income" style="width:${vals.income/maxVal*100}%"></div></div>
+          <span style="font-size:11px;color:var(--success);width:65px;">${fmt(vals.income)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="chart-bar-track"><div class="chart-bar-fill expense" style="width:${vals.expense/maxVal*100}%"></div></div>
+          <span style="font-size:11px;color:var(--danger);width:65px;">${fmt(vals.expense)}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function renderCategoryChart() {
+  const el = document.getElementById('chart-categories');
+  const cats = {};
+  data.transactions.filter(t=>t.type==='expense').forEach(t => {
+    const c = formatCategory(t.category);
+    cats[c] = (cats[c]||0) + t.amount;
+  });
+  const sorted = Object.entries(cats).sort((a,b)=>b[1]-a[1]);
+  if (sorted.length===0) { el.innerHTML='<div class="empty-state"><p>No expense data</p></div>'; return; }
+  const maxVal = Math.max(...sorted.map(([,v])=>v),1);
+  el.innerHTML = sorted.map(([cat,val])=>`
+    <div class="chart-bar-row">
+      <div class="chart-bar-label" style="width:90px;font-size:11px;">${cat}</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill expense" style="width:${val/maxVal*100}%"></div></div>
+      <div class="chart-bar-value" style="color:var(--danger);">${fmt(val)}</div>
+    </div>`).join('');
+}
+function renderPondReport() {
+  const el = document.getElementById('report-ponds');
+  if (data.ponds.length===0) { el.innerHTML='<div class="empty-state"><p>No ponds</p></div>'; return; }
+  el.innerHTML = data.ponds.map(p => {
+    const s = getPondStats(p.id);
+    const income  = data.transactions.filter(t=>t.pondId===p.id&&t.type==='income').reduce((a,t)=>a+t.amount,0);
+    const expense = data.transactions.filter(t=>t.pondId===p.id&&t.type==='expense').reduce((a,t)=>a+t.amount,0);
+    const survival = s.stocked>0 ? (((s.stocked-s.dead)/s.stocked)*100).toFixed(1) : '0.0';
+    const totalWeight = data.harvests.filter(h=>h.pondId===p.id).reduce((a,h)=>a+Number(h.weight||0),0);
+    const sortOuts = (data.sortings||[]).filter(s=>s.fromPondId===p.id).length;
+    return `<div class="pond-card ${p.status||'active'}" style="margin-bottom:10px;">
+      <h3>${p.name} <span style="font-size:12px;font-weight:400;">${p.species||''}</span></h3>
+      <div class="pond-stats" style="margin-top:6px;">
+        <div class="pond-stat">Survival: <strong>${survival}%</strong></div>
+        <div class="pond-stat">Alive: <strong>${fmtNum(s.alive)}</strong></div>
+        <div class="pond-stat">Harvested: <strong>${totalWeight}kg</strong></div>
+        <div class="pond-stat">Sort events: <strong>${sortOuts}</strong></div>
+        <div class="pond-stat">Income: <strong style="color:var(--success);">${fmt(income)}</strong></div>
+        <div class="pond-stat">Expenses: <strong style="color:var(--danger);">${fmt(expense)}</strong></div>
+        <div class="pond-stat">Profit: <strong style="color:${income-expense>=0?'var(--success)':'var(--danger)'};">${fmt(income-expense)}</strong></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============ DATA MANAGEMENT ============
+function exportData() {
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`shafat-farmtrack-backup-${today()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data exported!');
+}
+function importData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (imported.ponds||imported.transactions) {
+        data = {...getDefaultData(),...imported};
+        saveData(data); showToast('Data imported!'); refreshPage();
+      } else showToast('Invalid file format');
+    } catch { showToast('Error reading file'); }
+  };
+  reader.readAsText(file); event.target.value='';
+}
+function clearAllData() {
+  if (!confirm('Are you sure? This will delete ALL your data permanently!')) return;
+  if (!confirm('Really delete everything? This cannot be undone!')) return;
+  data = getDefaultData(); saveData(data); showToast('All data cleared'); refreshPage();
+}
+
+// ============ FIREBASE CONFIG ============
+// After creating your Firebase project, replace these placeholder values with your real config.
+// Get this from: Firebase Console → Project Settings → Your apps → SDK setup and configuration
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAEsDRvIILl8_WYcb26qMhf4kFVqQUt5ZU",
+  authDomain: "shafat-farmtrack.firebaseapp.com",
+  projectId: "shafat-farmtrack",
+  storageBucket: "shafat-farmtrack.firebasestorage.app",
+  messagingSenderId: "348937553106",
+  appId: "1:348937553106:web:c2bbd78d29bbddc2d2590b",
+  measurementId: "G-8VFK6T1EJM"
+};
+
+firebase.initializeApp(FIREBASE_CONFIG);
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+const COLLECTIONS = ['ponds','stockings','mortalities','sortings','transactions','harvests','sales'];
+let _listeners = [];
+
+// ============ SYNC INDICATOR ============
+function updateSyncIndicator(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (dot) dot.className = 'sync-dot ' + state;
+  if (lbl) lbl.textContent = label;
+}
+function showLoading(msg) {
+  document.getElementById('loading-text').textContent = msg || 'Loading...';
+  document.getElementById('loading-overlay').classList.add('active');
+}
+function hideLoading() { document.getElementById('loading-overlay').classList.remove('active'); }
+
+// ============ FIRESTORE API ============
+async function apiAdd(collection, record) {
+  if (currentUser) record.createdBy = currentUser.name;
+  if (!data[collection]) data[collection] = [];
+  if (!data[collection].find(r => r.id === record.id)) data[collection].push(record);
+  saveData(data);
+  updateSyncIndicator('syncing', 'Saving...');
+  try {
+    await db.collection(collection).doc(record.id).set(record);
+    updateSyncIndicator('connected', 'Live');
+  } catch(e) {
+    showToast('Save failed — check connection');
+    updateSyncIndicator('error', 'Error');
+  }
+}
+
+async function apiUpdate(collection, record) {
+  if (!data[collection]) data[collection] = [];
+  const idx = data[collection].findIndex(r => r.id === record.id);
+  if (idx !== -1) data[collection][idx] = record; else data[collection].push(record);
+  saveData(data);
+  updateSyncIndicator('syncing', 'Saving...');
+  try {
+    await db.collection(collection).doc(record.id).set(record);
+    updateSyncIndicator('connected', 'Live');
+  } catch(e) {
+    showToast('Update failed — check connection');
+    updateSyncIndicator('error', 'Error');
+  }
+}
+
+async function apiDelete(collection, id) {
+  if (data[collection]) data[collection] = data[collection].filter(r => r.id !== id);
+  saveData(data);
+  updateSyncIndicator('syncing', 'Deleting...');
+  try {
+    await db.collection(collection).doc(id).delete();
+    updateSyncIndicator('connected', 'Live');
+  } catch(e) {
+    showToast('Delete failed — check connection');
+    updateSyncIndicator('error', 'Error');
+  }
+}
+
+async function loadAllFromCloud() {
+  showLoading('Loading data...');
+  try {
+    const results = await Promise.all(COLLECTIONS.map(col => db.collection(col).get()));
+    COLLECTIONS.forEach((col, i) => { data[col] = results[i].docs.map(d => d.data()); });
+    normalizeDates(data);
+    saveData(data);
+    hideLoading();
+    refreshPage();
+    startRealtimeListeners();
+    return true;
+  } catch(e) {
+    hideLoading();
+    updateSyncIndicator('error', 'Offline');
+    console.error(e);
+    return false;
+  }
+}
+
+function startRealtimeListeners() {
+  _listeners.forEach(u => u());
+  _listeners = [];
+  COLLECTIONS.forEach(col => {
+    const unsub = db.collection(col).onSnapshot(snap => {
+      data[col] = snap.docs.map(d => d.data());
+      normalizeDates(data);
+      saveData(data);
+      refreshPage();
+      updateSyncIndicator('connected', 'Live');
+    }, () => updateSyncIndicator('error', 'Error'));
+    _listeners.push(unsub);
+  });
+}
+
+// ============ LOGIN ============
+async function doLogin() {
+  const pin = document.getElementById('login-pin').value.trim();
+  const errorEl = document.getElementById('login-error');
+  if (!pin) { errorEl.textContent = 'Please enter your PIN'; return; }
+  errorEl.textContent = 'Verifying...';
+  try {
+    await auth.signInAnonymously();
+    const snap = await db.collection('users').where('pin', '==', pin).limit(1).get();
+    if (snap.empty) { errorEl.textContent = 'Invalid PIN'; await auth.signOut(); return; }
+    const u = snap.docs[0].data();
+    currentUser = { name: u.name, role: u.role || 'helper', pin };
+    localStorage.setItem('shafat_user', JSON.stringify(currentUser));
+    errorEl.textContent = '';
+    completeLogin();
+  } catch(e) {
+    errorEl.textContent = e.message || 'Login failed';
+  }
+}
+
+async function completeLogin() {
+  document.getElementById('login-screen').classList.add('hidden');
+  const badge = document.getElementById('user-badge');
+  const roleChip = currentUser.role === 'admin'
+    ? `<span class="role-chip admin">Admin</span>`
+    : `<span class="role-chip helper">Helper</span>`;
+  badge.innerHTML = currentUser.name + ' ' + roleChip;
+  applyRoleUI();
+  if (!auth.currentUser) {
+    try { await auth.signInAnonymously(); } catch(e) { console.error(e); }
+  }
+  const loaded = await loadAllFromCloud();
+  if (!loaded) { data = loadData(); refreshPage(); }
+}
+
+function logout() {
+  _listeners.forEach(u => u());
+  _listeners = [];
+  currentUser = null;
+  localStorage.removeItem('shafat_user');
+  auth.signOut().catch(() => {});
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-error').textContent = '';
+  updateSyncIndicator('', 'Offline');
+}
+
+document.getElementById('login-pin').addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+
+// ============ INIT ============
+(function init() {
+  setTxnType('income');
+  const stored = localStorage.getItem('shafat_user');
+  if (stored) {
+    currentUser = JSON.parse(stored);
+    completeLogin();
+  } else {
+    data = loadData();
+    renderDashboard();
+  }
+})();
+</script>
+</body>
+</html>
