@@ -567,6 +567,13 @@ body {
   <div class="divider"></div>
 
   <div>
+    <div class="section-title">📋 Inventory Count History</div>
+    <ul class="record-list" id="adjustment-list"></ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
     <div class="section-title">Mortality Log</div>
     <ul class="record-list" id="mortality-list"></ul>
   </div>
@@ -624,6 +631,41 @@ body {
     </div>
     <button class="btn-outline" style="width:100%;margin-bottom:8px;color:var(--danger);border-color:var(--danger);" onclick="clearAllData()">Clear All Data</button>
     <button class="btn-outline" style="width:100%;" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- Inventory Count Modal -->
+<div class="modal-overlay" id="modal-adjustment">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>📋 Record Inventory Count</h2>
+      <button class="modal-close" onclick="closeModal('modal-adjustment')">&times;</button>
+    </div>
+    <div class="setup-card" style="margin-bottom:14px;">
+      <h3>Physical count correction</h3>
+      <p>Enter the actual number of fish you counted in this pond today. All future calculations will use this as the new baseline — your existing records are kept unchanged.</p>
+    </div>
+    <form onsubmit="addAdjustment(event)">
+      <div class="form-group">
+        <label>Pond</label>
+        <select id="adj-pond" required></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Actual Fish Count</label>
+          <input type="number" id="adj-count" placeholder="e.g. 304" required min="0">
+        </div>
+        <div class="form-group">
+          <label>Date of Count</label>
+          <input type="date" id="adj-date" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="adj-notes" placeholder="e.g. Physical count after sorting — July 25"></textarea>
+      </div>
+      <button type="submit" class="btn" style="background:#166534;color:white;">Save Verified Count</button>
+    </form>
   </div>
 </div>
 
@@ -687,6 +729,7 @@ body {
       <button class="btn btn-success" onclick="closeModal('modal-fab');openModal('modal-stock')">🐠 Stock Fish</button>
       <button class="btn btn-danger" onclick="closeModal('modal-fab');openModal('modal-mortality')">💀 Mortality</button>
       <button class="btn btn-warning" style="grid-column:1/-1;" onclick="closeModal('modal-fab');openModal('modal-sort')">🔀 Sort / Transfer Fish</button>
+      <button class="btn admin-only" style="background:#166534;color:white;grid-column:1/-1;" onclick="closeModal('modal-fab');openModal('modal-adjustment')">📋 Record Inventory Count</button>
       <button class="btn btn-primary admin-only" onclick="closeModal('modal-fab');openModal('modal-pond')">🏊 New Pond</button>
       <button class="btn admin-only" style="background:var(--warning);color:white;" onclick="closeModal('modal-fab');openModal('modal-finance')">💵 Income/Expense</button>
       <button class="btn admin-only" style="background:var(--purple);color:white;" onclick="closeModal('modal-fab');openModal('modal-harvest')">🎣 Harvest</button>
@@ -1009,7 +1052,7 @@ const STORAGE_KEY = 'shafat_farmtrack_data';
 
 function getDefaultData() {
   return {
-    ponds: [], stockings: [], mortalities: [], sortings: [],
+    ponds: [], stockings: [], mortalities: [], sortings: [], adjustments: [],
     transactions: [], harvests: [], sales: []
   };
 }
@@ -1043,7 +1086,7 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'), 2500);
 }
 function normalizeDates(d) {
-  const cols = ['ponds','stockings','mortalities','sortings','transactions','harvests','sales'];
+  const cols = ['ponds','stockings','mortalities','sortings','adjustments','transactions','harvests','sales'];
   cols.forEach(col => {
     if (d[col]) d[col].forEach(r => {
       ['date','createdAt'].forEach(f => {
@@ -1055,13 +1098,22 @@ function normalizeDates(d) {
 
 // ============ POND STATS ============
 function getPondStats(pondId) {
-  const stocked    = data.stockings.filter(s=>s.pondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
-  const dead       = data.mortalities.filter(m=>m.pondId===pondId).reduce((a,m)=>a+Number(m.qty),0);
-  const harvested  = data.harvests.filter(h=>h.pondId===pondId).reduce((a,h)=>a+Number(h.qty),0);
-  const sortedOut  = (data.sortings||[]).filter(s=>s.fromPondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
-  const sortedIn   = (data.sortings||[]).filter(s=>s.toPondId===pondId).reduce((a,s)=>a+Number(s.qty),0);
-  const alive = Math.max(0, stocked - dead - harvested - sortedOut + sortedIn);
-  return { stocked, dead, harvested, sortedOut, sortedIn, alive };
+  // Find most recent verified count (inventory adjustment)
+  const adjs = (data.adjustments||[]).filter(a=>a.pondId===pondId).sort((a,b)=>b.date.localeCompare(a.date));
+  const latestAdj = adjs.length > 0 ? adjs[0] : null;
+  const baseDate = latestAdj ? latestAdj.date : null;
+  const baseCount = latestAdj ? Number(latestAdj.actualCount) : 0;
+
+  // Only count events strictly after the adjustment date (or all events if no adjustment)
+  const after = d => !baseDate || String(d) > baseDate;
+
+  const stocked   = data.stockings.filter(s=>s.pondId===pondId&&after(s.date)).reduce((a,s)=>a+Number(s.qty),0);
+  const dead      = data.mortalities.filter(m=>m.pondId===pondId&&after(m.date)).reduce((a,m)=>a+Number(m.qty),0);
+  const harvested = data.harvests.filter(h=>h.pondId===pondId&&after(h.date)).reduce((a,h)=>a+Number(h.qty),0);
+  const sortedOut = (data.sortings||[]).filter(s=>s.fromPondId===pondId&&after(s.date)).reduce((a,s)=>a+Number(s.qty),0);
+  const sortedIn  = (data.sortings||[]).filter(s=>s.toPondId===pondId&&after(s.date)).reduce((a,s)=>a+Number(s.qty),0);
+  const alive = Math.max(0, baseCount + stocked - dead - harvested - sortedOut + sortedIn);
+  return { stocked, dead, harvested, sortedOut, sortedIn, alive, adjustment: latestAdj };
 }
 function getPondName(id) { const p=data.ponds.find(p=>p.id===id); return p?p.name:'Unknown'; }
 
@@ -1133,6 +1185,11 @@ function resetModalTitles() {
   document.getElementById('harv-submit-btn').textContent = 'Record Harvest';
   document.getElementById('sale-modal-title').textContent = 'Record Sale';
   document.getElementById('sale-submit-btn').textContent = 'Record Sale';
+  const adjModal = document.getElementById('modal-adjustment');
+  if (adjModal) {
+    adjModal.querySelector('h2').textContent = '📋 Record Inventory Count';
+    adjModal.querySelector('button[type="submit"]').textContent = 'Save Verified Count';
+  }
 }
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
@@ -1144,7 +1201,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 function populatePondSelects() {
-  const allSelects = ['stock-pond','mort-pond','txn-pond','harv-pond','sale-pond','finance-pond-filter'];
+  const allSelects = ['stock-pond','mort-pond','txn-pond','harv-pond','sale-pond','finance-pond-filter','adj-pond'];
   allSelects.forEach(id => {
     const sel = document.getElementById(id); if (!sel) return;
     const cur = sel.value;
@@ -1244,6 +1301,7 @@ async function deletePond(id) {
   for (const r of data.harvests.filter(h=>h.pondId===id)) await apiDelete('harvests',r.id);
   for (const r of data.sales.filter(s=>s.pondId===id)) await apiDelete('sales',r.id);
   for (const r of (data.sortings||[]).filter(s=>s.fromPondId===id||s.toPondId===id)) await apiDelete('sortings',r.id);
+  for (const r of (data.adjustments||[]).filter(a=>a.pondId===id)) await apiDelete('adjustments',r.id);
   await apiDelete('ponds',id);
   showToast('Pond deleted');
   refreshPage();
@@ -1371,6 +1429,53 @@ function editSort(id) {
 async function deleteSort(id) {
   if (!isAdmin()) return;
   await apiDelete('sortings',id); showToast('Sort record deleted'); refreshPage();
+}
+
+// ============ INVENTORY COUNT ============
+async function addAdjustment(e) {
+  e.preventDefault();
+  const pondId = document.getElementById('adj-pond').value;
+  const actualCount = parseInt(document.getElementById('adj-count').value);
+  const date = document.getElementById('adj-date').value;
+  if (!pondId || isNaN(actualCount) || actualCount < 0) { showToast('Please fill in all fields'); return; }
+  if (editMode.type === 'adjustment') {
+    const a = (data.adjustments||[]).find(a=>a.id===editMode.id);
+    if (a) {
+      a.pondId = pondId; a.actualCount = actualCount; a.date = date;
+      a.notes = document.getElementById('adj-notes').value.trim();
+      await apiUpdate('adjustments', a);
+    }
+    editMode = {type:null,id:null};
+    showToast('Inventory count updated!');
+  } else {
+    await apiAdd('adjustments', {
+      id: genId(), pondId, actualCount, date,
+      notes: document.getElementById('adj-notes').value.trim()
+    });
+    showToast(`✓ Verified count of ${fmtNum(actualCount)} recorded for ${getPondName(pondId)}`);
+  }
+  closeModal('modal-adjustment');
+  e.target.reset();
+  refreshPage();
+}
+function editAdjustment(id) {
+  const a = (data.adjustments||[]).find(a=>a.id===id); if (!a) return;
+  editMode = {type:'adjustment', id};
+  openModal('modal-adjustment');
+  setTimeout(() => {
+    document.getElementById('adj-pond').value = a.pondId;
+    document.getElementById('adj-count').value = a.actualCount;
+    document.getElementById('adj-date').value = a.date;
+    document.getElementById('adj-notes').value = a.notes || '';
+  }, 50);
+  document.querySelector('#modal-adjustment h2').textContent = '📋 Edit Inventory Count';
+  document.querySelector('#modal-adjustment button[type="submit"]').textContent = 'Save Changes';
+}
+async function deleteAdjustment(id) {
+  if (!confirm('Remove this inventory count? The pond count will revert to calculated history.')) return;
+  await apiDelete('adjustments', id);
+  showToast('Inventory count removed');
+  refreshPage();
 }
 
 // ============ TRANSACTIONS ============
@@ -1538,12 +1643,11 @@ function calcSaleTotal() {
 // ============ RENDER: DASHBOARD ============
 function renderDashboard() {
   const sortings = data.sortings || [];
+  // Sum alive per pond (respects inventory count adjustments)
+  const totalAlive = data.ponds.reduce((a,p)=>a+getPondStats(p.id).alive, 0);
   const totalStocked   = data.stockings.reduce((a,s)=>a+Number(s.qty),0);
   const totalDead      = data.mortalities.reduce((a,m)=>a+Number(m.qty),0);
   const totalHarvested = data.harvests.reduce((a,h)=>a+Number(h.qty),0);
-  const totalSortedNet = 0; // Sorting is pond-to-pond, net=0 for total
-  // Alive = total stocked - dead - harvested (sorting is internal redistribution)
-  const totalAlive = Math.max(0, totalStocked - totalDead - totalHarvested);
   const totalIncome  = data.transactions.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const totalExpense = data.transactions.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
   const profit = totalIncome - totalExpense;
@@ -1638,6 +1742,10 @@ function renderPonds() {
       const sortInfo = (s.sortedIn>0||s.sortedOut>0) ?
         `<div class="pond-stat">Sorted In: <strong style="color:var(--success)">${fmtNum(s.sortedIn)}</strong></div>
          <div class="pond-stat">Sorted Out: <strong style="color:var(--warning)">${fmtNum(s.sortedOut)}</strong></div>` : '';
+      const adjBadge = s.adjustment
+        ? `<div style="font-size:11px;background:#dcfce7;color:#166534;padding:4px 8px;border-radius:6px;margin-top:6px;display:inline-block;">
+            ✓ Verified: ${fmtNum(s.adjustment.actualCount)} fish on ${fmtDate(s.adjustment.date)}
+           </div>` : '';
       return `<div class="pond-card ${st}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
@@ -1649,9 +1757,10 @@ function renderPonds() {
             <button class="btn-delete" onclick="deletePond('${p.id}')" title="Delete">×</button>` : ''}
           </div>
         </div>
-        <div class="pond-stats">
+        ${adjBadge}
+        <div class="pond-stats" style="margin-top:8px;">
           <div class="pond-stat">Alive: <strong style="color:var(--primary);font-size:14px;">${fmtNum(s.alive)}</strong></div>
-          <div class="pond-stat">Stocked: <strong>${fmtNum(s.stocked)}</strong></div>
+          ${s.adjustment ? `<div class="pond-stat" style="font-size:11px;color:var(--text-light);">(since verified count)</div>` : `<div class="pond-stat">Stocked: <strong>${fmtNum(s.stocked)}</strong></div>`}
           <div class="pond-stat">Dead: <strong style="color:var(--danger)">${fmtNum(s.dead)}</strong></div>
           <div class="pond-stat">Harvested: <strong style="color:var(--success)">${fmtNum(s.harvested)}</strong></div>
           ${sortInfo}
@@ -1660,6 +1769,7 @@ function renderPonds() {
           <button class="btn btn-small btn-success" onclick="openModal('modal-stock');setTimeout(()=>document.getElementById('stock-pond').value='${p.id}',50)">+ Stock</button>
           <button class="btn btn-small btn-danger" onclick="openModal('modal-mortality');setTimeout(()=>document.getElementById('mort-pond').value='${p.id}',50)">+ Mortality</button>
           <button class="btn btn-small btn-warning" onclick="openModal('modal-sort');setTimeout(()=>{document.getElementById('sort-from').value='${p.id}';updateSortAvailable();},50)">🔀 Sort</button>
+          ${admin ? `<button class="btn btn-small" style="background:#166534;color:white;" onclick="openModal('modal-adjustment');setTimeout(()=>document.getElementById('adj-pond').value='${p.id}',50)">📋 Count</button>` : ''}
           ${admin ? `<button class="btn btn-small" style="background:var(--purple);color:white;" onclick="openModal('modal-harvest');setTimeout(()=>document.getElementById('harv-pond').value='${p.id}',50)">🎣 Harvest</button>` : ''}
         </div>
         ${p.notes ? `<div style="font-size:12px;color:var(--text-light);margin-top:8px;">${p.notes}</div>` : ''}
@@ -1686,6 +1796,28 @@ function renderPonds() {
           <button class="btn-delete" onclick="deleteSort('${s.id}')">×</button>` : ''}
         </div>
       </li>`).join('');
+  }
+
+  // Inventory count log
+  const adjEl = document.getElementById('adjustment-list');
+  if (adjEl) {
+    const adjs = [...(data.adjustments||[])].sort((a,b)=>b.date.localeCompare(a.date));
+    if (adjs.length===0) {
+      adjEl.innerHTML = '<div class="empty-state"><p>No inventory counts recorded yet</p></div>';
+    } else {
+      adjEl.innerHTML = adjs.map(a=>`
+        <li class="record-item">
+          <div class="record-info">
+            <h4>📋 ${getPondName(a.pondId)}: ${fmtNum(a.actualCount)} fish verified</h4>
+            <p>${fmtDate(a.date)}${a.createdBy?' · by '+a.createdBy:''}${a.notes?' · '+a.notes:''}</p>
+          </div>
+          <div class="record-actions">
+            <span class="record-amount" style="color:#166534;">✓${fmtNum(a.actualCount)}</span>
+            <button class="btn-edit" onclick="editAdjustment('${a.id}')" title="Edit">✎</button>
+            ${admin ? `<button class="btn-delete" onclick="deleteAdjustment('${a.id}')">×</button>` : ''}
+          </div>
+        </li>`).join('');
+    }
   }
 
   // Mortality log
@@ -1954,7 +2086,7 @@ firebase.initializeApp(FIREBASE_CONFIG);
 const db   = firebase.firestore();
 const auth = firebase.auth();
 
-const COLLECTIONS = ['ponds','stockings','mortalities','sortings','transactions','harvests','sales'];
+const COLLECTIONS = ['ponds','stockings','mortalities','sortings','adjustments','transactions','harvests','sales'];
 let _listeners = [];
 
 // ============ SYNC INDICATOR ============
