@@ -333,6 +333,12 @@ body {
 .sort-badge.small { background: #fef9c3; color: #92400e; }
 .sort-badge.sickly { background: #fee2e2; color: var(--danger); }
 .sort-badge.other { background: #f3e8ff; color: var(--purple); }
+.pond-card.staging {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-color: #86efac;
+}
+.pond-card.staging h3 { color: #166534; }
+.status-badge.staging { background: #dcfce7; color: #166534; }
 
 /* Sync */
 .sync-status {
@@ -536,6 +542,11 @@ body {
   <div class="card" id="dash-quarantine-card" style="display:none;">
     <div class="card-title" style="color:var(--warning);">⚠️ Quarantine Ponds</div>
     <div id="dash-quarantine-list"></div>
+  </div>
+
+  <div class="card" id="dash-staging-card" style="display:none;">
+    <div class="card-title" style="color:var(--success);">🏪 Ready for Sale</div>
+    <div id="dash-staging-list"></div>
   </div>
 
   <div class="card">
@@ -783,6 +794,13 @@ body {
         </div>
       </div>
       <div class="form-group">
+        <label>Role</label>
+        <select id="pond-role" onchange="autoGeneratePondName()">
+          <option value="production">Production (growing fish)</option>
+          <option value="staging">Staging / Harvest (ready for sale)</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Size (ft)</label>
         <input type="text" id="pond-size" placeholder="e.g. 12x10x4">
       </div>
@@ -1012,6 +1030,10 @@ body {
       <div class="form-group">
         <label>Pond</label>
         <select id="sale-pond" required></select>
+        <div id="sale-pond-hint" style="font-size:12px;color:var(--text-light);margin-top:4px;min-height:18px;"></div>
+      </div>
+      <div style="font-size:11px;background:#f0fdf4;color:#166534;padding:6px 10px;border-radius:6px;margin-bottom:10px;">
+        ✓ Recording a sale automatically deducts fish from the pond
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1208,7 +1230,9 @@ function populatePondSelects() {
     const isFilter = id.includes('filter');
     const isOpt = id === 'txn-pond';
     sel.innerHTML = isFilter ? '<option value="">All Ponds</option>' : isOpt ? '<option value="">None</option>' : '';
-    data.ponds.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name}${p.status==='quarantine'?' 🔴':p.status==='inactive'?' ⚫':''}</option>`; });
+    data.ponds.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name}${p.role==='staging'?' 🏪':''}${p.status==='quarantine'?' 🔴':p.status==='inactive'?' ⚫':''}</option>`; });
+  const saleHint = document.getElementById('sale-pond-hint');
+  if (saleHint) saleHint.textContent = '';
     if (cur) sel.value = cur;
   });
   // Sort from/to selects
@@ -1251,6 +1275,13 @@ const speciesPrefixes = {
 };
 function autoGeneratePondName() {
   if (editMode.type === 'pond') return;
+  const role = document.getElementById('pond-role').value;
+  if (role === 'staging') {
+    const count = data.ponds.filter(p=>p.role==='staging').length;
+    const labels = ['LARGE','MEDIUM','SMALL'];
+    document.getElementById('pond-name').value = 'STG-' + (labels[count] || String(count+1));
+    return;
+  }
   const species = document.getElementById('pond-species').value;
   const prefix = speciesPrefixes[species] || 'OTH';
   const count = data.ponds.filter(p=>p.name.startsWith(prefix+'-')).length;
@@ -1263,6 +1294,7 @@ async function addPond(e) {
     name: document.getElementById('pond-name').value.trim(),
     type: document.getElementById('pond-type').value,
     status: document.getElementById('pond-status').value,
+    role: document.getElementById('pond-role').value,
     size: document.getElementById('pond-size').value.trim(),
     species: document.getElementById('pond-species').value,
     notes: document.getElementById('pond-notes').value.trim(),
@@ -1289,6 +1321,7 @@ function editPond(id) {
   document.getElementById('pond-name').removeAttribute('readonly');
   document.getElementById('pond-type').value = p.type || 'earthen';
   document.getElementById('pond-status').value = p.status || 'active';
+  document.getElementById('pond-role').value = p.role || 'production';
   document.getElementById('pond-size').value = p.size || '';
   document.getElementById('pond-notes').value = p.notes || '';
   document.getElementById('pond-modal-title').textContent = 'Edit Pond';
@@ -1607,6 +1640,14 @@ async function addSale(e) {
       date: document.getElementById('sale-date').value
     };
     await apiAdd('sales', sale);
+    await apiAdd('harvests', {
+      id: genId(),
+      pondId: sale.pondId,
+      qty: sale.qty,
+      weight: sale.weight || 0,
+      date: sale.date,
+      notes: `Sale to ${sale.buyer || 'customer'}`
+    });
     await apiAdd('transactions', {
       id: genId(), type:'income', category:'fish_sales',
       pondId: sale.pondId, amount: total, date: sale.date,
@@ -1632,6 +1673,18 @@ function editSale(id) {
 }
 async function deleteSale(id) { await apiDelete('sales',id); showToast('Deleted'); refreshPage(); }
 
+document.getElementById('sale-pond').addEventListener('change', function() {
+  const hint = document.getElementById('sale-pond-hint');
+  if (!hint) return;
+  const pondId = this.value;
+  if (pondId) {
+    const s = getPondStats(pondId);
+    hint.textContent = `Available: ~${fmtNum(s.alive)} fish in this pond`;
+    hint.style.color = s.alive < 20 ? 'var(--danger)' : 'var(--text-light)';
+  } else {
+    hint.textContent = '';
+  }
+});
 document.getElementById('sale-weight').addEventListener('input', calcSaleTotal);
 document.getElementById('sale-price').addEventListener('input', calcSaleTotal);
 function calcSaleTotal() {
@@ -1680,6 +1733,28 @@ function renderDashboard() {
     }).join('');
   } else {
     qCard.style.display = 'none';
+  }
+
+  // Staging ponds (ready for sale)
+  const stagingPonds = data.ponds.filter(p => p.role === 'staging' && p.status !== 'inactive');
+  const stagingCard = document.getElementById('dash-staging-card');
+  if (stagingPonds.length > 0) {
+    stagingCard.style.display = '';
+    document.getElementById('dash-staging-list').innerHTML = stagingPonds.map(p => {
+      const s = getPondStats(p.id);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <strong>${p.name}</strong>
+          <div style="font-size:11px;color:var(--text-light);">Staging — ${p.species||'Fish'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:700;color:var(--success);">${fmtNum(s.alive)} ready</div>
+          ${s.harvested > 0 ? `<div style="font-size:11px;color:var(--text-light);">${fmtNum(s.harvested)} sold</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    stagingCard.style.display = 'none';
   }
 
   // Pond overview
@@ -1739,6 +1814,7 @@ function renderPonds() {
       const s = getPondStats(p.id);
       const st = p.status||'active';
       const statusBadge = st!=='active' ? `<span class="status-badge ${st}">${st==='quarantine'?'⚠️ Quarantine':'Inactive'}</span>` : '';
+      const roleBadge = p.role==='staging' ? `<span class="status-badge staging">🏪 Staging</span>` : '';
       const sortInfo = (s.sortedIn>0||s.sortedOut>0) ?
         `<div class="pond-stat">Sorted In: <strong style="color:var(--success)">${fmtNum(s.sortedIn)}</strong></div>
          <div class="pond-stat">Sorted Out: <strong style="color:var(--warning)">${fmtNum(s.sortedOut)}</strong></div>` : '';
@@ -1746,10 +1822,10 @@ function renderPonds() {
         ? `<div style="font-size:11px;background:#dcfce7;color:#166534;padding:4px 8px;border-radius:6px;margin-top:6px;display:inline-block;">
             ✓ Verified: ${fmtNum(s.adjustment.actualCount)} fish on ${fmtDate(s.adjustment.date)}
            </div>` : '';
-      return `<div class="pond-card ${st}">
+      return `<div class="pond-card ${st}${p.role==='staging'?' staging':''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <h3>${p.name}${statusBadge}</h3>
+            <h3>${p.name}${statusBadge}${roleBadge}</h3>
             <div style="font-size:12px;color:var(--text-light);">${p.species||''} · ${p.type||''} ${p.size?'· '+p.size:''}</div>
           </div>
           <div style="display:flex;gap:4px;">
