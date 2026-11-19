@@ -992,12 +992,6 @@ body {
         <label>Description</label>
         <input type="text" id="txn-desc" placeholder="What is this for?">
       </div>
-      <div class="form-group" id="txn-capital-row" style="display:none;">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:#eff6ff;padding:10px;border-radius:8px;border:1px solid #bfdbfe;">
-          <input type="checkbox" id="txn-capital" style="width:18px;height:18px;accent-color:var(--blue);">
-          <span style="font-size:13px;">Capital Investment <span style="font-size:11px;color:var(--text-light);display:block;">Money from outside — not from fish sales</span></span>
-        </label>
-      </div>
       <button type="submit" class="btn btn-primary" id="txn-submit-btn">Save Transaction</button>
     </form>
   </div>
@@ -1541,8 +1535,6 @@ function setTxnType(type) {
   document.getElementById('txn-type-expense').classList.toggle('active', type==='expense');
   const cats = type==='income' ? incomeCategories : expenseCategories;
   document.getElementById('txn-category').innerHTML = cats.map(c=>`<option value="${c}">${formatCategory(c)}</option>`).join('');
-  document.getElementById('txn-capital-row').style.display = type==='expense' ? '' : 'none';
-  if (type==='income') document.getElementById('txn-capital').checked = false;
 }
 async function addTransaction(e) {
   e.preventDefault();
@@ -1555,7 +1547,6 @@ async function addTransaction(e) {
       t.amount = parseFloat(document.getElementById('txn-amount').value);
       t.date = document.getElementById('txn-date').value;
       t.desc = document.getElementById('txn-desc').value.trim();
-      t.capital = t.type === 'expense' && document.getElementById('txn-capital').checked;
       await apiUpdate('transactions', t);
     }
     editMode={type:null,id:null};
@@ -1569,8 +1560,7 @@ async function addTransaction(e) {
       pondId: document.getElementById('txn-pond').value||'',
       amount: parseFloat(document.getElementById('txn-amount').value),
       date: document.getElementById('txn-date').value,
-      desc: document.getElementById('txn-desc').value.trim(),
-      capital: txnType === 'expense' && document.getElementById('txn-capital').checked
+      desc: document.getElementById('txn-desc').value.trim()
     });
     showToast('Transaction saved!');
   }
@@ -1586,7 +1576,6 @@ function editTransaction(id) {
   document.getElementById('txn-amount').value = t.amount;
   document.getElementById('txn-date').value = t.date;
   document.getElementById('txn-desc').value = t.desc||'';
-  document.getElementById('txn-capital').checked = t.capital || false;
   document.getElementById('finance-modal-title').textContent = 'Edit Transaction';
   document.getElementById('txn-submit-btn').textContent = 'Save Changes';
 }
@@ -1719,6 +1708,23 @@ function calcSaleTotal() {
 }
 
 // ============ RENDER: DASHBOARD ============
+function computeFinancials() {
+  const sorted = [...data.transactions].sort((a,b)=>a.date.localeCompare(b.date));
+  let cash = 0, capitalInvested = 0;
+  for (const t of sorted) {
+    if (t.type === 'income') {
+      cash += t.amount;
+    } else {
+      if (cash >= t.amount) {
+        cash -= t.amount;
+      } else {
+        capitalInvested += (t.amount - cash);
+        cash = 0;
+      }
+    }
+  }
+  return { availableCash: cash, capitalInvested };
+}
 function renderDashboard() {
   const sortings = data.sortings || [];
   // Sum alive per pond (respects inventory count adjustments)
@@ -1728,9 +1734,7 @@ function renderDashboard() {
   const totalHarvested = data.harvests.reduce((a,h)=>a+Number(h.qty),0);
   const totalIncome  = data.transactions.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const totalExpense = data.transactions.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
-  const capitalInvested = data.transactions.filter(t=>t.type==='expense'&&t.capital).reduce((a,t)=>a+t.amount,0);
-  const operationalExpense = totalExpense - capitalInvested;
-  const availableCash = totalIncome - operationalExpense;
+  const { availableCash, capitalInvested } = computeFinancials();
   const profit = totalIncome - totalExpense;
   const survival = totalStocked>0 ? (((totalStocked-totalDead)/totalStocked)*100).toFixed(1) : '0.0';
   const activePonds = data.ponds.filter(p=>p.status!=='inactive').length;
@@ -1956,10 +1960,29 @@ function setFinanceTab(tab, el) {
   if (el) el.classList.add('active');
   renderFinance();
 }
+function computeCapitalIds() {
+  const sorted = [...data.transactions].sort((a,b)=>a.date.localeCompare(b.date));
+  const capitalIds = new Set();
+  let cash = 0;
+  for (const t of sorted) {
+    if (t.type === 'income') {
+      cash += t.amount;
+    } else {
+      if (cash >= t.amount) {
+        cash -= t.amount;
+      } else {
+        capitalIds.add(t.id);
+        cash = 0;
+      }
+    }
+  }
+  return capitalIds;
+}
 function renderFinance() {
   populateMonthFilter();
   const monthFilter = document.getElementById('finance-month').value;
   const pondFilter = document.getElementById('finance-pond-filter').value;
+  const capitalIds = computeCapitalIds();
   let txns = [...data.transactions].sort((a,b)=>b.date.localeCompare(a.date));
   if (financeFilter!=='all') txns = txns.filter(t=>t.type===financeFilter);
   if (monthFilter) txns = txns.filter(t=>t.date.substring(0,7)===monthFilter);
@@ -1976,7 +1999,7 @@ function renderFinance() {
     el.innerHTML = txns.map(t=>`
       <li class="record-item">
         <div class="record-info">
-          <h4>${t.desc||formatCategory(t.category)}${t.capital?'<span style="font-size:10px;background:#dbeafe;color:var(--blue);padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:600;">CAPITAL</span>':''}</h4>
+          <h4>${t.desc||formatCategory(t.category)}${capitalIds.has(t.id)?'<span style="font-size:10px;background:#dbeafe;color:var(--blue);padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:600;">CAPITAL</span>':''}</h4>
           <p>${fmtDate(t.date)}${t.pondId?' · '+getPondName(t.pondId):''} · ${formatCategory(t.category)}${t.createdBy?' · by '+t.createdBy:''}</p>
         </div>
         <div class="record-actions">
