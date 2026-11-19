@@ -2245,7 +2245,7 @@ function generateReport() {
   .save-btn{background:white;color:#0e7490;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;}
   @media print{.save-bar{display:none;}body{padding-top:24px;} h2{page-break-after:avoid;}}
 </style>
-<script>
+<scr` + `ipt>
 async function saveReport() {
   const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
   const date = new Date().toISOString().slice(0,10);
@@ -2256,7 +2256,7 @@ async function saveReport() {
   }
   window.print();
 }
-</script>
+<\/script>
 </head><body>
 <div class="save-bar">
   <span>🐟 Farm Report</span>
