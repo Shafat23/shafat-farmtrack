@@ -2244,10 +2244,23 @@ function generateReport() {
   .save-bar span{color:white;font-size:14px;font-weight:600;}
   .save-btn{background:white;color:#0e7490;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;}
   @media print{.save-bar{display:none;}body{padding-top:24px;} h2{page-break-after:avoid;}}
-</style></head><body>
+</style>
+<script>
+async function saveReport() {
+  const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
+  const date = new Date().toISOString().slice(0,10);
+  const blob = new Blob([html], {type:'text/html'});
+  const file = new File([blob], 'shafat-farm-report-' + date + '.html', {type:'text/html'});
+  if (navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+    try { await navigator.share({title:'ShaFat Farm Report', files:[file]}); return; } catch(e) { if (e.name==='AbortError') return; }
+  }
+  window.print();
+}
+</script>
+</head><body>
 <div class="save-bar">
   <span>🐟 Farm Report</span>
-  <button class="save-btn" onclick="window.print()">Save as PDF</button>
+  <button class="save-btn" onclick="saveReport()">Share / Save PDF</button>
 </div>
 <h1>🐟 ShaFat FarmTrack — Farm Report</h1>
 <div class="meta">Generated: ${generatedOn} &nbsp;|&nbsp; ShaFat Farms</div>
