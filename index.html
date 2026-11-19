@@ -635,7 +635,13 @@ body {
 <!-- ========== REPORTS ========== -->
 <div class="page" id="page-reports">
   <div class="card">
-    <div class="card-title">Monthly Income vs Expenses</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="card-title" style="margin-bottom:0;">Monthly Income vs Expenses</div>
+      <div style="display:flex;gap:4px;">
+        <button id="chart-btn-6" class="tab active" style="padding:4px 10px;font-size:11px;" onclick="setMonthRange(6,this)">6 Mo</button>
+        <button id="chart-btn-all" class="tab" style="padding:4px 10px;font-size:11px;" onclick="setMonthRange(0,this)">All</button>
+      </div>
+    </div>
     <div class="chart-bar-container" id="chart-monthly"></div>
   </div>
   <div class="card">
@@ -645,6 +651,11 @@ body {
   <div class="card">
     <div class="card-title">Pond Performance</div>
     <div id="report-ponds"></div>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac;">
+    <div class="card-title" style="color:#166534;">📄 Generate Report</div>
+    <p style="font-size:13px;color:#166534;margin-bottom:12px;">Export a formatted financial report you can save as PDF — covers all months, all ponds, full summary.</p>
+    <button class="btn btn-primary" style="width:100%;background:#16a34a;border-color:#16a34a;" onclick="generateReport()">Generate & Open Report</button>
   </div>
   <div class="card">
     <div class="card-title">Data Management</div>
@@ -2073,6 +2084,13 @@ function renderReports() {
   renderCategoryChart();
   renderPondReport();
 }
+let monthChartRange = 6;
+function setMonthRange(n, btn) {
+  monthChartRange = n;
+  document.getElementById('chart-btn-6').classList.toggle('active', n===6);
+  document.getElementById('chart-btn-all').classList.toggle('active', n===0);
+  renderMonthlyChart();
+}
 function renderMonthlyChart() {
   const el = document.getElementById('chart-monthly');
   const months = {};
@@ -2081,12 +2099,13 @@ function renderMonthlyChart() {
     if (!months[m]) months[m]={income:0,expense:0};
     months[m][t.type] += t.amount;
   });
-  const sorted = Object.entries(months).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6).reverse();
+  let sorted = Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0]));
+  if (monthChartRange > 0) sorted = sorted.slice(-monthChartRange);
   if (sorted.length===0) { el.innerHTML='<div class="empty-state"><p>No data yet</p></div>'; return; }
   const maxVal = Math.max(...sorted.map(([,v])=>Math.max(v.income,v.expense)),1);
   el.innerHTML = sorted.map(([month,vals])=>`
     <div class="chart-bar-row">
-      <div class="chart-bar-label">${month.slice(5)}</div>
+      <div class="chart-bar-label">${month.slice(0,7)}</div>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
           <div class="chart-bar-track"><div class="chart-bar-fill income" style="width:${vals.income/maxVal*100}%"></div></div>
@@ -2139,6 +2158,126 @@ function renderPondReport() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ============ REPORT GENERATOR ============
+function generateReport() {
+  const { availableCash, capitalInvested } = computeFinancials();
+  const totalIncome  = data.transactions.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const totalExpense = data.transactions.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const totalAlive   = data.ponds.reduce((a,p)=>a+getPondStats(p.id).alive,0);
+  const totalStocked = data.stockings.reduce((a,s)=>a+Number(s.qty),0);
+  const totalDead    = data.mortalities.reduce((a,m)=>a+Number(m.qty),0);
+  const survival     = totalStocked>0?(((totalStocked-totalDead)/totalStocked)*100).toFixed(1):'0.0';
+
+  // Monthly breakdown (all months)
+  const months = {};
+  data.transactions.forEach(t=>{
+    const m=t.date.substring(0,7);
+    if(!months[m]) months[m]={income:0,expense:0};
+    months[m][t.type]+=t.amount;
+  });
+  const monthRows = Object.entries(months).sort((a,b)=>a[0].localeCompare(b[0])).map(([m,v])=>`
+    <tr>
+      <td>${m}</td>
+      <td style="color:#16a34a;text-align:right;">${fmt(v.income)}</td>
+      <td style="color:#dc2626;text-align:right;">${fmt(v.expense)}</td>
+      <td style="color:${v.income-v.expense>=0?'#16a34a':'#dc2626'};text-align:right;font-weight:600;">${fmt(v.income-v.expense)}</td>
+    </tr>`).join('');
+
+  // Expenses by category
+  const cats = {};
+  data.transactions.filter(t=>t.type==='expense').forEach(t=>{
+    const c=formatCategory(t.category); cats[c]=(cats[c]||0)+t.amount;
+  });
+  const catRows = Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`
+    <tr><td>${c}</td><td style="color:#dc2626;text-align:right;">${fmt(v)}</td></tr>`).join('');
+
+  // Pond performance
+  const pondRows = data.ponds.map(p=>{
+    const s=getPondStats(p.id);
+    const inc=data.transactions.filter(t=>t.pondId===p.id&&t.type==='income').reduce((a,t)=>a+t.amount,0);
+    const exp=data.transactions.filter(t=>t.pondId===p.id&&t.type==='expense').reduce((a,t)=>a+t.amount,0);
+    const surv=s.stocked>0?(((s.stocked-s.dead)/s.stocked)*100).toFixed(1):'0.0';
+    const wt=data.harvests.filter(h=>h.pondId===p.id).reduce((a,h)=>a+Number(h.weight||0),0);
+    return `<tr>
+      <td><strong>${p.name}</strong><br><span style="font-size:11px;color:#64748b;">${p.species||''}</span></td>
+      <td style="text-align:right;">${fmtNum(s.stocked)}</td>
+      <td style="text-align:right;">${fmtNum(s.alive)}</td>
+      <td style="text-align:right;">${surv}%</td>
+      <td style="text-align:right;">${wt}kg</td>
+      <td style="color:#16a34a;text-align:right;">${fmt(inc)}</td>
+      <td style="color:#dc2626;text-align:right;">${fmt(exp)}</td>
+      <td style="color:${inc-exp>=0?'#16a34a':'#dc2626'};text-align:right;font-weight:600;">${fmt(inc-exp)}</td>
+    </tr>`;
+  }).join('');
+
+  // Sales list
+  const salesRows = [...(data.sales||[])].sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`
+    <tr>
+      <td>${fmtDate(s.date)}</td>
+      <td>${getPondName(s.pondId)}</td>
+      <td>${s.buyer||'—'}</td>
+      <td style="text-align:right;">${fmtNum(s.qty)}</td>
+      <td style="text-align:right;">${s.weight||0}kg</td>
+      <td style="text-align:right;">${s.pricePerKg||0}/kg</td>
+      <td style="color:#16a34a;text-align:right;font-weight:600;">${fmt((s.qty*(s.pricePerKg||0))+(s.flatFee||0))}</td>
+    </tr>`).join('');
+
+  const generatedOn = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>ShaFat FarmTrack Report — ${generatedOn}</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;margin:0;padding:24px;font-size:13px;}
+  h1{color:#0e7490;font-size:22px;margin-bottom:4px;}
+  h2{color:#0e7490;font-size:15px;margin:28px 0 10px;border-bottom:2px solid #e2e8f0;padding-bottom:6px;}
+  .meta{color:#64748b;font-size:12px;margin-bottom:24px;}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+  .summary-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;}
+  .summary-box .val{font-size:18px;font-weight:700;}
+  .summary-box .lbl{font-size:11px;color:#64748b;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+  th{background:#f1f5f9;text-align:left;padding:7px 10px;font-size:12px;color:#475569;}
+  td{padding:6px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  @media print{body{padding:0;} h2{page-break-after:avoid;}}
+</style></head><body>
+<h1>🐟 ShaFat FarmTrack — Farm Report</h1>
+<div class="meta">Generated: ${generatedOn} &nbsp;|&nbsp; ShaFat Farms</div>
+
+<h2>Financial Summary</h2>
+<div class="summary">
+  <div class="summary-box"><div class="val" style="color:#16a34a;">${fmt(totalIncome)}</div><div class="lbl">Total Income</div></div>
+  <div class="summary-box"><div class="val" style="color:#dc2626;">${fmt(totalExpense)}</div><div class="lbl">Total Expenses</div></div>
+  <div class="summary-box"><div class="val" style="color:${totalIncome-totalExpense>=0?'#16a34a':'#dc2626'};">${fmt(totalIncome-totalExpense)}</div><div class="lbl">Overall Net</div></div>
+</div>
+<div class="summary" style="margin-top:8px;">
+  <div class="summary-box"><div class="val" style="color:#16a34a;">${fmt(availableCash)}</div><div class="lbl">Available Cash<br>(sales − running costs)</div></div>
+  <div class="summary-box"><div class="val" style="color:#2563eb;">${fmt(capitalInvested)}</div><div class="lbl">Capital Invested<br>(outside money)</div></div>
+  <div class="summary-box"><div class="val">${fmtNum(totalAlive)}</div><div class="lbl">Fish Alive<br>(survival ${survival}%)</div></div>
+</div>
+
+<h2>Monthly Breakdown</h2>
+<table><thead><tr><th>Month</th><th style="text-align:right;">Income</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Net</th></tr></thead>
+<tbody>${monthRows}</tbody></table>
+
+<h2>Expenses by Category</h2>
+<table><thead><tr><th>Category</th><th style="text-align:right;">Total</th></tr></thead>
+<tbody>${catRows}</tbody></table>
+
+<h2>Pond Performance</h2>
+<table><thead><tr><th>Pond</th><th style="text-align:right;">Stocked</th><th style="text-align:right;">Alive</th><th style="text-align:right;">Survival</th><th style="text-align:right;">Harvested</th><th style="text-align:right;">Income</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Profit</th></tr></thead>
+<tbody>${pondRows}</tbody></table>
+
+<h2>Sales History</h2>
+<table><thead><tr><th>Date</th><th>Pond</th><th>Buyer</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Weight</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th></tr></thead>
+<tbody>${salesRows}</tbody></table>
+
+</body></html>`;
+
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else showToast('Allow popups to open the report');
 }
 
 // ============ DATA MANAGEMENT ============
