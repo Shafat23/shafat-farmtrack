@@ -510,10 +510,23 @@ body {
   </div>
 
   <div class="card admin-fin">
-    <div class="card-title">Profit / Loss</div>
-    <div style="text-align:center;">
-      <div id="dash-profit" style="font-size:28px;font-weight:700;">GH₵0.00</div>
-      <div style="font-size:12px;color:var(--text-light);margin-top:4px;">Net Profit</div>
+    <div class="card-title">Financial Overview</div>
+    <div style="display:flex;justify-content:space-around;text-align:center;margin-bottom:12px;">
+      <div>
+        <div id="dash-available-cash" style="font-size:22px;font-weight:700;color:var(--success);">GH₵0.00</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">Available Cash</div>
+        <div style="font-size:10px;color:var(--text-light);">(sales − running costs)</div>
+      </div>
+      <div style="width:1px;background:var(--border);"></div>
+      <div>
+        <div id="dash-capital" style="font-size:22px;font-weight:700;color:var(--blue);">GH₵0.00</div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">Capital Invested</div>
+        <div style="font-size:10px;color:var(--text-light);">(outside money)</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding-top:10px;border-top:1px solid var(--border);">
+      <div id="dash-profit" style="font-size:16px;font-weight:700;">GH₵0.00</div>
+      <div style="font-size:11px;color:var(--text-light);">Overall Net (all-in P&amp;L)</div>
     </div>
   </div>
 
@@ -978,6 +991,12 @@ body {
       <div class="form-group">
         <label>Description</label>
         <input type="text" id="txn-desc" placeholder="What is this for?">
+      </div>
+      <div class="form-group" id="txn-capital-row" style="display:none;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:#eff6ff;padding:10px;border-radius:8px;border:1px solid #bfdbfe;">
+          <input type="checkbox" id="txn-capital" style="width:18px;height:18px;accent-color:var(--blue);">
+          <span style="font-size:13px;">Capital Investment <span style="font-size:11px;color:var(--text-light);display:block;">Money from outside — not from fish sales</span></span>
+        </label>
       </div>
       <button type="submit" class="btn btn-primary" id="txn-submit-btn">Save Transaction</button>
     </form>
@@ -1522,6 +1541,8 @@ function setTxnType(type) {
   document.getElementById('txn-type-expense').classList.toggle('active', type==='expense');
   const cats = type==='income' ? incomeCategories : expenseCategories;
   document.getElementById('txn-category').innerHTML = cats.map(c=>`<option value="${c}">${formatCategory(c)}</option>`).join('');
+  document.getElementById('txn-capital-row').style.display = type==='expense' ? '' : 'none';
+  if (type==='income') document.getElementById('txn-capital').checked = false;
 }
 async function addTransaction(e) {
   e.preventDefault();
@@ -1534,19 +1555,22 @@ async function addTransaction(e) {
       t.amount = parseFloat(document.getElementById('txn-amount').value);
       t.date = document.getElementById('txn-date').value;
       t.desc = document.getElementById('txn-desc').value.trim();
+      t.capital = t.type === 'expense' && document.getElementById('txn-capital').checked;
       await apiUpdate('transactions', t);
     }
     editMode={type:null,id:null};
     showToast('Transaction updated!');
   } else {
+    const txnType = document.getElementById('txn-type').value;
     await apiAdd('transactions', {
       id: genId(),
-      type: document.getElementById('txn-type').value,
+      type: txnType,
       category: document.getElementById('txn-category').value,
       pondId: document.getElementById('txn-pond').value||'',
       amount: parseFloat(document.getElementById('txn-amount').value),
       date: document.getElementById('txn-date').value,
-      desc: document.getElementById('txn-desc').value.trim()
+      desc: document.getElementById('txn-desc').value.trim(),
+      capital: txnType === 'expense' && document.getElementById('txn-capital').checked
     });
     showToast('Transaction saved!');
   }
@@ -1562,6 +1586,7 @@ function editTransaction(id) {
   document.getElementById('txn-amount').value = t.amount;
   document.getElementById('txn-date').value = t.date;
   document.getElementById('txn-desc').value = t.desc||'';
+  document.getElementById('txn-capital').checked = t.capital || false;
   document.getElementById('finance-modal-title').textContent = 'Edit Transaction';
   document.getElementById('txn-submit-btn').textContent = 'Save Changes';
 }
@@ -1703,6 +1728,9 @@ function renderDashboard() {
   const totalHarvested = data.harvests.reduce((a,h)=>a+Number(h.qty),0);
   const totalIncome  = data.transactions.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
   const totalExpense = data.transactions.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const capitalInvested = data.transactions.filter(t=>t.type==='expense'&&t.capital).reduce((a,t)=>a+t.amount,0);
+  const operationalExpense = totalExpense - capitalInvested;
+  const availableCash = totalIncome - operationalExpense;
   const profit = totalIncome - totalExpense;
   const survival = totalStocked>0 ? (((totalStocked-totalDead)/totalStocked)*100).toFixed(1) : '0.0';
   const activePonds = data.ponds.filter(p=>p.status!=='inactive').length;
@@ -1714,6 +1742,10 @@ function renderDashboard() {
   const profitEl = document.getElementById('dash-profit');
   profitEl.textContent = fmt(profit);
   profitEl.style.color = profit>=0 ? 'var(--success)' : 'var(--danger)';
+  const cashEl = document.getElementById('dash-available-cash');
+  cashEl.textContent = fmt(availableCash);
+  cashEl.style.color = availableCash>=0 ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('dash-capital').textContent = fmt(capitalInvested);
   document.getElementById('dash-stocked').textContent = fmtNum(totalStocked);
   document.getElementById('dash-dead').textContent = fmtNum(totalDead);
   document.getElementById('dash-sorted').textContent = fmtNum(sortings.length);
@@ -1944,7 +1976,7 @@ function renderFinance() {
     el.innerHTML = txns.map(t=>`
       <li class="record-item">
         <div class="record-info">
-          <h4>${t.desc||formatCategory(t.category)}</h4>
+          <h4>${t.desc||formatCategory(t.category)}${t.capital?'<span style="font-size:10px;background:#dbeafe;color:var(--blue);padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:600;">CAPITAL</span>':''}</h4>
           <p>${fmtDate(t.date)}${t.pondId?' · '+getPondName(t.pondId):''} · ${formatCategory(t.category)}${t.createdBy?' · by '+t.createdBy:''}</p>
         </div>
         <div class="record-actions">
