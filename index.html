@@ -2228,7 +2228,7 @@ function generateReport() {
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>ShaFat FarmTrack Report — ${generatedOn}</title>
 <style>
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;margin:0;padding:24px;font-size:13px;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;margin:0;padding:24px;padding-top:70px;font-size:13px;}
   h1{color:#0e7490;font-size:22px;margin-bottom:4px;}
   h2{color:#0e7490;font-size:15px;margin:28px 0 10px;border-bottom:2px solid #e2e8f0;padding-bottom:6px;}
   .meta{color:#64748b;font-size:12px;margin-bottom:24px;}
@@ -2240,8 +2240,15 @@ function generateReport() {
   th{background:#f1f5f9;text-align:left;padding:7px 10px;font-size:12px;color:#475569;}
   td{padding:6px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top;}
   tr:last-child td{border-bottom:none;}
-  @media print{body{padding:0;} h2{page-break-after:avoid;}}
+  .save-bar{position:fixed;top:0;left:0;right:0;background:#0e7490;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;z-index:999;}
+  .save-bar span{color:white;font-size:14px;font-weight:600;}
+  .save-btn{background:white;color:#0e7490;border:none;border-radius:8px;padding:8px 18px;font-size:14px;font-weight:700;cursor:pointer;}
+  @media print{.save-bar{display:none;}body{padding-top:24px;} h2{page-break-after:avoid;}}
 </style></head><body>
+<div class="save-bar">
+  <span>🐟 Farm Report</span>
+  <button class="save-btn" onclick="window.print()">Save as PDF</button>
+</div>
 <h1>🐟 ShaFat FarmTrack — Farm Report</h1>
 <div class="meta">Generated: ${generatedOn} &nbsp;|&nbsp; ShaFat Farms</div>
 
